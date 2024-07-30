@@ -1,0 +1,22 @@
+2024/07/30-14:01:36.061 610 Reusing MANIFEST D:\Projects\attendance-esp32-based-system\backend\data\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
+2024/07/30-14:01:36.063 610 Recovering log #4336
+2024/07/30-14:01:36.183 610 Reusing old log D:\Projects\attendance-esp32-based-system\backend\data\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/004336.log 
+2024/07/30-14:01:37.888 6b98 Level-0 table #4342: started
+2024/07/30-14:01:37.940 6b98 Level-0 table #4342: 205176 bytes OK
+2024/07/30-14:01:38.000 6b98 Delete type=0 #4336
+2024/07/30-14:01:38.001 5d1c Manual compaction at level-0 from ' 3\x03\x00\x00\x00' @ 72057594037927935 : 1 .. ' 4\x03\x00\x00\x00' @ 0 : 0; will stop at (end)
+2024/07/30-14:01:40.034 3d34 Compacting 1@1 + 2@2 files
+2024/07/30-14:01:40.939 3d34 Generated table #4343@1: 81870 keys, 2251293 bytes
+2024/07/30-14:01:41.252 3d34 Generated table #4344@1: 13958 keys, 859346 bytes
+2024/07/30-14:01:41.252 3d34 Compacted 1@1 + 2@2 files => 3110639 bytes
+2024/07/30-14:01:41.289 3d34 compacted to: files[ 0 0 2 0 0 0 0 ]
+2024/07/30-14:01:41.291 3d34 Delete type=2 #4338
+2024/07/30-14:01:41.291 3d34 Delete type=2 #4339
+2024/07/30-14:01:41.291 3d34 Delete type=2 #4342
+2024/07/30-14:02:08.133 3d34 Level-0 table #4346: started
+2024/07/30-14:02:08.184 3d34 Level-0 table #4346: 123809 bytes OK
+2024/07/30-14:02:08.267 3d34 Delete type=0 #4341
+2024/07/30-14:02:08.268 d80 Manual compaction at level-0 from ' 4\x03\x00\x00\x00' @ 72057594037927935 : 1 .. ' 5\x03\x00\x00\x00' @ 0 : 0; will stop at (end)
+2024/07/30-14:02:12.905 13d4 Compacting 1@1 + 2@2 files
+2024/07/30-14:02:13.047 13d4 Generated table #4347@1: 82265 keys, 2253412 bytes
+2024/07/30-14:02:13.047 13d4 compacted to: files[ 0 1 2 0 0 0 0 ]

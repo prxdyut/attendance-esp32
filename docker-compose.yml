@@ -1,0 +1,45 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "4444:3000"
+    # volumes:
+      # - /app/node_modules
+      # - ./prod/backend:/app
+    environment:
+      - CHROME_PATH=/usr/bin/google-chrome-stable
+      - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+      - ENV=production
+      - MONGODB_URI=mongodb://mongodb:27017
+    tmpfs:
+      - /tmp/chrome-user-data
+    depends_on:
+      - mongodb
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "4445:5173"
+    # volumes:
+      # - ./prod/frontend:/app
+    environment:
+      - NODE_ENV=production
+      - BACKEND_URL=http://localhost:3000
+
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./mongodb/data:/data
+    command: mongod --bind_ip_all
+
+volumes:
+  node_modules:

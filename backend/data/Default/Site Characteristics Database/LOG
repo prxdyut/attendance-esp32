@@ -1,0 +1,4 @@
+2024/07/30-14:02:51.886 5230 Reusing MANIFEST D:\Projects\attendance-esp32-based-system\backend\data\Default\Site Characteristics Database/MANIFEST-000001
+2024/07/30-14:02:51.886 5230 Recovering log #3
+2024/07/30-14:02:51.886 5230 (ignoring error) D:\Projects\attendance-esp32-based-system\backend\data\Default\Site Characteristics Database/000003.log: dropping 9199 bytes; Corruption: checksum mismatch
+2024/07/30-14:02:51.886 5230 Reusing old log D:\Projects\attendance-esp32-based-system\backend\data\Default\Site Characteristics Database/000003.log 
