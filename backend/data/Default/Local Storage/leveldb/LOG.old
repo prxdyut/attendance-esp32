@@ -1,8 +1,0 @@
-2024/07/30-14:01:35.690 8b68 Reusing MANIFEST D:\Projects\attendance-esp32-based-system\backend\data\Default\Local Storage\leveldb/MANIFEST-000001
-2024/07/30-14:01:35.697 8b68 Recovering log #111
-2024/07/30-14:01:35.995 8b68 Level-0 table #115: started
-2024/07/30-14:01:36.954 8b68 Level-0 table #115: 12069 bytes OK
-2024/07/30-14:01:36.955 8b68 Recovering log #115
-2024/07/30-14:01:36.958 8b68 Reusing old log D:\Projects\attendance-esp32-based-system\backend\data\Default\Local Storage\leveldb/000115.log 
-2024/07/30-14:01:37.266 8b68 Delete type=0 #111
-2024/07/30-14:01:37.266 8b68 Delete type=2 #116
