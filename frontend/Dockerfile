@@ -10,9 +10,8 @@ RUN npm i
 # Copy the rest of the application code
 COPY . .
 
-
 # Expose port 4000
 EXPOSE 5173
 
 # Start the application
-CMD ["npm", "run", "preview", "--", "--port", "5173", "--host"]
+CMD ["npm", "run", "dev", "--", "--port", "5173", "--host"]
