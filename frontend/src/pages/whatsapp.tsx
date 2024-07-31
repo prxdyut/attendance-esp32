@@ -127,7 +127,7 @@ export default function Whatsapp() {
       "/whatsapp/screenshot",
       setLoading,
       (data: any) => {
-        window.open(`http://${process.env.BACKEND_URL || "http://localhost:3000" }/${data.screenshotPath}`);
+        window.open(`/api/${data.screenshotPath}`);
       },
       setError
     );
@@ -156,7 +156,7 @@ export default function Whatsapp() {
           {qrCode && (
             <div className="mb-6">
               <AutoReloadImage
-                src={`http://${process.env.BACKEND_URL || "http://localhost:3000" }/${qrCode}`}
+                src={`/api/${qrCode}`}
                 alt={"Whatsapp QR"}
                 className="mx-auto"
               />
@@ -275,7 +275,7 @@ export default function Whatsapp() {
                           <a
                             target="_blank"
                             href={
-                              `http://${process.env.BACKEND_URL || "http://localhost:3000" }/whatsapp/errors` +
+                              `/whatsapp/errors` +
                               msg.screen
                             }
                             className=" text-blue-900 font-bold"

@@ -9,45 +9,73 @@ export default function Batches() {
   useEffect(() => {
     handleFetch("/batches", setLoading, setBatches, console.log);
   }, []);
-  console.log(batches);
+
   return (
     <React.Fragment>
-      <div className=" flex flex-col gap-4">
-        <p className=" font-semibold text-lg">Batches</p>
-        <div className=" border p-2 flex gap-2">
-          <input className=" border" />
-          <button className="border px-2 py-1">Search</button>
-          <div className=" flex-grow" />
-          <Link className=" border px-2 py-1" to="/batches/new">
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-2xl font-bold mb-6">Batches</h1>
+        <div className="bg-white shadow-md rounded-lg p-6 mb-6">
+          <div className="flex items-center mb-4">
+            <input
+              className="flex-grow border border-gray-300 rounded-l-md py-2 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Search batches..."
+            />
+            <button className="bg-blue-500 text-white py-2 px-4 rounded-r-md hover:bg-blue-600 transition duration-300">
+              Search
+            </button>
+          </div>
+          <Link
+            to="/batches/new"
+            className="bg-green-500 text-white py-2 px-4 rounded-md hover:bg-green-600 transition duration-300"
+          >
             Create Batch
           </Link>
         </div>
-        <div className=" border p-2">
-          <table className=" w-full border table-auto">
-            <thead>
+        <div className="bg-white shadow-md rounded-lg overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-gray-50">
               <tr>
-                <th className="text-start w-min p-2">Id</th>
-                <th className=" w-[40%] text-start">Name</th>
-                <th className="">Total</th>
-                <th>Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Id
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Name
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Total
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="bg-white divide-y divide-gray-200">
               {batches.map((batch, index) => (
                 <tr key={batch._id}>
-                  <td>{index + 1}</td>
-                  <td>{batch.name}</td>
-                  <td>61</td>
-                  <td className=" flex gap-2">
-                    <Link to={`/statistics?batch=${batch._id}`} className=" border">
-                      view
-                    </Link>
-                    <Link to={`/batches/${batch._id}/edit`} className=" border">
-                      edit
-                    </Link>
-                    <Link to={`/batches/${batch._id}/delete`} className=" border">
-                      delete
-                    </Link>
+                  <td className="px-6 py-4 whitespace-nowrap">{index + 1}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{batch.name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">61</td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex space-x-2">
+                      <Link
+                        to={`/statistics?batch=${batch._id}`}
+                        className="text-blue-600 hover:text-blue-900"
+                      >
+                        View
+                      </Link>
+                      <Link
+                        to={`/batches/${batch._id}/edit`}
+                        className="text-yellow-600 hover:text-yellow-900"
+                      >
+                        Edit
+                      </Link>
+                      <Link
+                        to={`/batches/${batch._id}/delete`}
+                        className="text-red-600 hover:text-red-900"
+                      >
+                        Delete
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}

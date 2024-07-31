@@ -38,7 +38,7 @@ export default function UserNew() {
           name="role"
           id="role"
           value={roleInputValue}
-          disabled={Boolean(roleInputValue)}
+          // disabled={Boolean(roleInputValue)}
         >
           <option value="student">Student</option>
           <option value="faculty">Faculty</option>

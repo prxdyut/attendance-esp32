@@ -8,25 +8,28 @@ const router = express.Router();
 
 router.get("/", async (req, res) => {
   try {
-    const { uid, timestamp, multiple } = req.query as {
-      uid: string;
-      timestamp: string;
-      multiple: string | undefined;
-    };
+    const url = req.protocol + '://' + req.get('host') + req.originalUrl;
+    const params = new URL(url).searchParams;
+
+    let uids: any = params.get("uids") as string;
+    const uid = params.get("uid") as string;
+    let timestamps: any = params.get("timestamps") as string;
+    const timestamp = params.get("timestamp") as string;
+    const multiple = params.has("multiple");
 
     if (multiple) {
-      const uids = uid.split(",");
-      const timestamps = timestamp.split(",");
+      uids = uids.split(",");
+      timestamps = timestamps.split(",");
 
       const results = await Promise.all(
         uids.map((uid: string, index: number) =>
           processPunch(uid, new Date(timestamps[index]))
         )
       );
-      res.status(200).send("success");
+      res.send("success");
     } else {
-      const result = await processPunch(uid, new Date(timestamp));
-      res.status(200).send("success");
+      const result = await processPunch(uid, new Date((timestamp)));
+      res.send("success");
     }
   } catch (error: any) {
     console.error("Error processing punches:", error.message);

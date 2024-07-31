@@ -30,14 +30,13 @@ services:
       # - ./prod/frontend:/app
     environment:
       - NODE_ENV=production
-      - BACKEND_URL=http://localhost:3000
 
   mongodb:
     image: mongo:latest
     container_name: mongodb
     ports:
-      - "27017:27017"
-    volumes:
+      - "27018:27017"
+    volumes:          
       - ./mongodb/data:/data
     command: mongod --bind_ip_all
 

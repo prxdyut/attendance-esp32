@@ -5,7 +5,7 @@ export const handleFetch = async (
   onError: any
 ) => {
   setLoading(true);
-  let response : any = await fetch(`http://${process.env.BACKEND_URL || "http://localhost:3000" }/api` + endpoint, {
+  let response : any = await fetch(`/api` + endpoint, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",

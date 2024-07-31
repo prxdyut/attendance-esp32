@@ -16,17 +16,17 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: "*",
     methods: ["GET", "POST", "PUT", "DELETE"],
   })
 );
 
 mongoose
-  .connect(process.env.MONGODB_URI || "mongodb://localhost:27017/attendance")
+  .connect(process.env.MONGODB_URI || "mongodb://localhost:27017")
   .then(() => console.log("Connected to MongoDB"))
   .catch((err) => console.error("MongoDB connection error:", err));
 
-app.use(express.static("public"));
+app.use("/api", express.static("public"));
 app.use("/api/batches", batchRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/templates", templateRoutes);
