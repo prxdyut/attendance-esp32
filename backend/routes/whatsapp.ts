@@ -101,7 +101,7 @@ const requestQueue = new RequestQueue();
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
-const production = process.env.ENV === "production";
+const production = process.env.ENV === "production" || true;
 async function initializeBrowser(): Promise<void> {
   try {
     context.browser = await puppeteer.launch({

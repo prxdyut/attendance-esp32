@@ -1,3 +1,5 @@
+import { Calendar, Clock, UserMinus, Users, UserX } from "lucide-react";
+
 export default function Dashboard() {
   const Logs = [
     {
@@ -91,73 +93,65 @@ export default function Dashboard() {
       time: "10:30 AM",
     },
   ];
+  const stats = [
+    { title: "Present Champs", icon: Users, color: "bg-green-100 text-green-800" },
+    { title: "Absent Minds", icon: UserMinus, color: "bg-red-100 text-red-800" },
+    { title: "Late Arrivals", icon: Clock, color: "bg-yellow-100 text-yellow-800" },
+    { title: "Early Exits", icon: UserX, color: "bg-purple-100 text-purple-800" },
+  ];
 
   return (
-    <div className=" grid grid-cols-2 gap-4 h-full">
-      <div className=" flex flex-col gap-4">
-        <div className=" border p-2 flex">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6 bg-gray-100 min-h-screen">
+      <div className="flex flex-col gap-6">
+        <div className="bg-white rounded-lg shadow p-6 flex items-center justify-between">
           <div>
-            <p>Whatsapp : Connected</p>
-            <p className=" text-xs">Last Updated: 24 July 2024, 9:24 PM</p>
+            <h2 className="text-xl font-semibold text-gray-800">WhatsApp Status</h2>
+            <p className="text-green-600 font-medium">Connected</p>
+            <p className="text-sm text-gray-500">Last Updated: 24 July 2024, 9:24 PM</p>
           </div>
-          <div className=" flex-grow" />
-          <button>retry</button>
+          <button className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition duration-300">
+            Retry
+          </button>
         </div>
-        <div className=" grid grid-cols-2 gap-4">
-          <div className=" border">
-            <div className=" p-2">
-              <div className=" h-8" />
-              <p>Present Champs</p>
+
+        <div className="grid grid-cols-2 gap-6">
+          {stats.map((stat, index) => (
+            <div key={index} className={`bg-white rounded-lg shadow p-6 ${stat.color}`}>
+              <stat.icon className="w-8 h-8 mb-4" />
+              <h3 className="text-lg font-semibold">{stat.title}</h3>
+              <p className="text-3xl font-bold mt-2">0</p>
             </div>
-          </div>
-          <div className=" border">
-            <div className=" p-2">
-              <div className=" h-8" />
-              <p>Absent Minds</p>
-            </div>
-          </div>
-          <div className=" border">
-            <div className=" p-2">
-              <div className=" h-8" />
-              <p>Late Arrivals</p>
-            </div>
-          </div>
-          <div className=" border">
-            <div className=" p-2">
-              <div className=" h-8" />
-              <p>Early Exits</p>
-            </div>
-          </div>
+          ))}
         </div>
-        <div className=" flex-grow flex flex-col gap-4">
-          <div className=" border">
-            <div className=" p-2">
-              <div className=" h-20" />
-              <p>Holiday for ...</p>
-            </div>
+
+        <div className="bg-white rounded-lg shadow p-6 flex-grow">
+          <div className="flex items-center mb-4">
+            <Calendar className="w-6 h-6 mr-2 text-blue-500" />
+            <h2 className="text-xl font-semibold text-gray-800">Holiday for ...</h2>
           </div>
-          <div className=" border flex-grow">
-            <div className=" p-2">
-              <pre>Weekly Report</pre>
-            </div>
-          </div>
+          <p className="text-gray-600">No upcoming holidays</p>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6 flex-grow">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">Weekly Report</h2>
+          <p className="text-gray-600">Report data will be displayed here</p>
         </div>
       </div>
-      <div className=" w-full border p-2 h-full flex gap-2 flex-col overflow-auto">
-        <div>
-          <pre> Realtime Logs</pre>
-        </div>
-        <div className=" overflow-auto flex flex-col gap-1">
+
+      <div className="bg-white rounded-lg shadow p-6 flex flex-col h-full">
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">Realtime Logs</h2>
+        <div className="overflow-auto flex-grow">
           {Logs.map((log, i) => (
-            <div key={i} className=" flex gap-2 border px-2 py-1 items-end">
+            <div key={i} className="flex items-center justify-between py-3 border-b border-gray-200 last:border-b-0">
               <div>
-                <div className=" font-semibold">{log.name}</div>
-                <div className=" text-xs">{log.batch_id}</div>
+                <p className="font-semibold text-gray-800">{log.name}</p>
+                <p className="text-sm text-gray-500">{log.batch_id}</p>
               </div>
-              <div className=" flex-grow" />
-              <div>
-                <div className=" text-xs text-right">{log.status}</div>
-                <pre className="">{log.time}</pre>
+              <div className="text-right">
+                <p className={`text-sm ${log.status === 'on time' ? 'text-green-600' : 'text-red-600'}`}>
+                  {log.status}
+                </p>
+                <p className="text-sm font-medium">{log.time}</p>
               </div>
             </div>
           ))}
