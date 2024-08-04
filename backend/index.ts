@@ -22,7 +22,7 @@ app.use(
 );
 
 mongoose
-  .connect(process.env.MONGODB_URI || "mongodb://localhost:27018")
+  .connect(process.env.MONGODB_URI || "mongodb://localhost:22222/databse")
   .then(() => console.log("Connected to MongoDB"))
   .catch((err) => console.error("MongoDB connection error:", err));
 

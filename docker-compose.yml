@@ -14,11 +14,11 @@ services:
       - CHROME_PATH=/usr/bin/google-chrome-stable
       - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
       - ENV=production
-      - MONGODB_URI=mongodb://mongodb:27017
+      - MONGODB_URI=mongodb://mongo:27017
     tmpfs:
       - /tmp/chrome-user-data
     depends_on:
-      - mongodb
+      - mongo
 
   frontend:
     build:
@@ -31,11 +31,10 @@ services:
     environment:
       - NODE_ENV=production
 
-  mongodb:
+  mongo:
     image: mongo:latest
-    container_name: mongodb
     ports:
-      - "27018:27017"
+      - "22222:27017"
     volumes:          
       - ./mongodb/data:/data
     command: mongod --bind_ip_all
