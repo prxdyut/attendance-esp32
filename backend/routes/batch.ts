@@ -1,33 +1,37 @@
 import express from 'express';
-import { Batch } from '../mongodb/models';
+import { Batch, User } from '../mongodb/models';
 
 const router = express.Router();
 
+// Create a batch
 router.post('/', async (req, res) => {
   try {
     const batch = new Batch(req.body);
     await batch.save();
-    res.status(201).json({success: true, data: batch, message: 'Batch created successfully'});
+    res.status(201).json({ success: true, data: batch, message: 'Batch created successfully' });
   } catch (error: any) {
     res.status(400).json({ success: false, message: error.message });
   }
 });
 
+// Get All Batches
 router.get('/', async (req, res) => {
   try {
     const batches = await Batch.find();
-    res.json({success: true, data: batches});
+    res.json({ success: true, data: batches });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// TODO: redirect to statistics
+// Get A Single Batch
 router.get('/:id', async (req, res) => {
   try {
     const batch = await Batch.findById(req.params.id);
     if (!batch) return res.status(404).json({ success: false, message: 'Batch not found' });
-    res.json({ success: true, data: batch });
+    const students = await User.find({ role: 'student', batchIds: batch._id })
+    const faculty = await User.find({ role: 'faculty', batchIds: batch._id })
+    res.json({ success: true, data: { batch, students, faculty } });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }

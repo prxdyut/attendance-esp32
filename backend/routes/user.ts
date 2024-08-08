@@ -1,5 +1,6 @@
 import express from "express";
-import { NewCard, User } from "../mongodb/models";
+import { NewCard, Punch, User } from "../mongodb/models";
+import { addDays } from "date-fns";
 
 const router = express.Router();
 
@@ -28,16 +29,49 @@ router.get("/", async (req, res) => {
     let users = [];
     switch (role) {
       case "all":
-        users = await User.find({role: ["student", "faculty"]});
+        users = await User.find({ role: ["student", "faculty"] });
         break;
       default:
         users = await User.find({ role });
         break;
     }
 
-    res.json({ success: true, data: users });
+    res.json({ success: true, data: { users } });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.get('/data', async (req, res) => {
+  const { userId, startDate, endDate } = req.query;
+
+  try {
+    const user = await User.findOne({ _id: userId });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const punches = await Punch.find({
+      userId: user._id,
+      timestamp: {
+        $gte: new Date(startDate as string),
+        $lte: addDays(endDate as string, 1)
+      }
+    }).sort({timestamp :1})
+
+    res.json({
+      success: true, data: {
+        userData: {
+          name: user.name,
+          role: user.role,
+          phone: user.phone
+        },
+        punches: punches
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching user data:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 

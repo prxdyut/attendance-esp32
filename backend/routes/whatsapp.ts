@@ -178,8 +178,7 @@ async function detectAndCropQRCode(path: string, req: Request): Promise<void> {
       console.log("Content:", qrResult.result);
       console.log("QR Code points:", JSON.stringify(qrResult.points));
 
-      // Calculate crop area with increased padding
-      const padding = 50; // Increased padding
+      const padding = 50;
       const minX = Math.min(
         ...qrResult.points.map((p: { x: number; y: number }) => p.x)
       );
@@ -211,11 +210,9 @@ async function detectAndCropQRCode(path: string, req: Request): Promise<void> {
         );
       }
 
-      // Crop the image
       const croppedImage = image.clone().crop(x, y, width, height);
 
-      // Add extra space at the bottom
-      const extraSpace = 50; // Adjust this value as needed
+      const extraSpace = 50;
       const newHeight = croppedImage.bitmap.height + extraSpace;
       const finalImage = new Jimp(
         croppedImage.bitmap.width,
@@ -238,7 +235,7 @@ async function detectAndCropQRCode(path: string, req: Request): Promise<void> {
       console.log("No QR code detected in the image.");
     }
   } catch (error) {
-    console.error("An error occurred:", error);
+    console.error("An error occurred:", error.message);
   }
 }
 
@@ -537,10 +534,6 @@ async function waitForLinkCode(phoneNumber: string): Promise<boolean> {
     await new Promise((resolve) => setTimeout(resolve, 1000));
   }
 }
-
-router.get("/", (req: Request, res: Response) => {
-  res.json("api working");
-});
 
 router.post("/login", async (req: Request, res: Response) => {
   try {

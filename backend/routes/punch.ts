@@ -16,21 +16,23 @@ router.get("/", async (req, res) => {
     let timestamps: any = params.get("timestamps") as string;
     const timestamp = params.get("timestamp") as string;
     const multiple = params.has("multiple");
+    let results;
 
     if (multiple) {
       uids = uids.split(",");
       timestamps = timestamps.split(",");
 
-      const results = await Promise.all(
+      results = await Promise.all(
         uids.map((uid: string, index: number) =>
           processPunch(uid, new Date(timestamps[index]))
         )
       );
       res.send("success");
     } else {
-      const result = await processPunch(uid, new Date((timestamp)));
+      results = await processPunch(uid, new Date((timestamp)));
       res.send("success");
     }
+    console.log(results)
   } catch (error: any) {
     console.error("Error processing punches:", error.message);
     res.status(400).send("error");
@@ -69,7 +71,7 @@ async function processPunch(uid: string, timestamp: Date) {
 
     if (existingPunch) {
       console.warn("Duplicate punch detected:", existingPunch);
-      throw new Error("Duplicate punch");
+      return { status: "success", message: "Punch was already recorded", uid };
     }
 
     const punch = new Punch({ userId: user._id, timestamp });
@@ -118,7 +120,7 @@ async function processPunch(uid: string, timestamp: Date) {
 
     if (existingPunch) {
       console.warn("Duplicate new punch detected:", existingPunch);
-      throw new Error("Duplicate New punch");
+      return { status: "success", message: "New Punch was already recorded", uid };
     }
 
     const newCard = new NewCard({ uid, timestamp });

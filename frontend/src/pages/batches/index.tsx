@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, Outlet } from "react-router-dom";
-import { handleFetch } from "../utils/handleFetch";
+import { handleFetch } from "../../utils/handleFetch";
 import { Search, Plus, Eye, Edit, Trash2 } from "lucide-react";
 
 export default function Batches() {
@@ -67,7 +67,7 @@ export default function Batches() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">61</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex space-x-2">
-                          <Link to={`/statistics?batch=${batch._id}`} className="text-blue-600 hover:text-blue-900">
+                          <Link to={`/batches/${batch._id}`} className="text-blue-600 hover:text-blue-900">
                             <Eye size={18} />
                           </Link>
                           <Link to={`/batches/${batch._id}/edit`} className="text-yellow-600 hover:text-yellow-900">
@@ -79,7 +79,7 @@ export default function Batches() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    ))}
                 </tbody>
               </table>
             </div>

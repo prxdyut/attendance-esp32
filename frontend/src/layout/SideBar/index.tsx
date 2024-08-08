@@ -123,7 +123,7 @@ export default function SideBar() {
               );
             case "logout":
               return (
-                <li style={{ color: "red" }}>
+                <li style={{ color: "red" }} key={i}>
                   <Link to={"/logout"}>
                     icon
                     <p>Logout</p>

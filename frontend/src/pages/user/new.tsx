@@ -7,7 +7,6 @@ export default function UserNew() {
   const [roleInputValue, setRoleInputValue] = useState("");
 
   useEffect(() => {
-    const roleInput = document.querySelector("#role") as HTMLSelectElement;
     if (location.pathname.includes("student")) {
       setRoleInputValue("student");
     } else if (location.pathname.includes("faculty")) {
