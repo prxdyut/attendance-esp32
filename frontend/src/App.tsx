@@ -69,7 +69,7 @@ function App() {
               <Route path="view" element={<Students />} />
             </Route>
           </Route>
-          <Route path="Batches">
+          <Route path="batches">
             <Route path=":id" element={<BatchSingle />} />
             <Route element={<Batches />}>
               <Route index />

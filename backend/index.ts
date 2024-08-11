@@ -9,9 +9,17 @@ import whatsappRoutes from "./routes/whatsapp";
 import statisticsRoutes from "./routes/statistics"; // Import the statisticsRoutes
 
 import cors from "cors";
+import { Server } from "socket.io";
+import { whatsappSocket } from "./routes/websockets/whatsapp";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const socket = new Server(4000, {
+  path: "/",
+  cors: {
+    origin: "*",
+  },
+});
 
 app.use(express.json());
 app.use(
@@ -36,8 +44,9 @@ app.use("/api/whatsapp", whatsappRoutes);
 app.use("/api/statistics", statisticsRoutes);
 app.use("/punch", punchRoutes);
 
+socket.of("/whatsApp").on("connection", whatsappSocket);
+console.log("Socket.IO server is running on port 4000");
+
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
-
-export default app;

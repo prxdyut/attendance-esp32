@@ -68,8 +68,7 @@ export default function Whatsapp() {
   };
 
   const login = async (e: any) => {
-    handleSubmit(
-      e,
+    handleFetch(
       "/whatsapp/login",
       setLoading,
       (data: any) => {
@@ -170,15 +169,13 @@ export default function Whatsapp() {
             >
               Check Status
             </button>
-            <form onSubmit={login} className="contents">
-              <input type="hidden" name="method" value="qr" />
               <button
+              onClick={login}
                 type="submit"
                 className="bg-green-500 text-white p-2 rounded hover:bg-green-600 transition-colors"
               >
                 Login
               </button>
-            </form>
             <form onSubmit={logout} className="contents">
               <button
                 type="submit"

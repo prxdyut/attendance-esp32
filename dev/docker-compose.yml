@@ -3,19 +3,16 @@ version: "3.8"
 services:
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
-    ports:
-      - "4444:3000"
-      - "4000:4000"
-    # volumes:
-      # - /app/node_modules
-      # - ./prod/backend:/app
+      context: "../backend"
+      dockerfile: Dockerfile.dev
     environment:
       - CHROME_PATH=/usr/bin/google-chrome-stable
       - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-      - ENV=production
+      - ENV=development
       - MONGODB_URI=mongodb://mongo:27017
+    volumes: 
+      - ../backend:/app
+      - ../browserData:/app/browserData
     tmpfs:
       - /tmp/chrome-user-data
     depends_on:
@@ -23,19 +20,13 @@ services:
 
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    ports:
-      - "4445:5173"
-    # volumes:
-      # - ./prod/frontend:/app
+      context: ../frontend
+      dockerfile: Dockerfile.dev
     environment:
       - NODE_ENV=production
 
   mongo:
     image: mongo:latest
-    ports:
-      - "22222:27017"
     volumes:          
       - ./mongodb/data:/data
     command: mongod --bind_ip_all
@@ -45,7 +36,7 @@ services:
     ports:
       - "1000:80"
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       - frontend
       - backend

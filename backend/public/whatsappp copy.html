@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Image Viewer</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="flex items-center justify-center min-h-screen bg-gray-900">
+    <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+        <h2 class="text-white text-center text-xl mb-4">Received Image:</h2>
+        <img id="whatsappImage" alt="WhatsApp Image" class="max-w-full max-h-96 mx-auto border border-gray-700 rounded-lg"/>
+    </div>
+
+    <script>
+        // Connect to WhatsApp namespace
+        const socketWhatsApp = io('http://localhost:1000/whatsApp');
+
+        // Listen for connection events
+        socketWhatsApp.on('connect', () => {
+            console.log('Connected to WhatsApp namespace');
+        });
+
+        console.log(socketWhatsApp)
+        // Listen for incoming base64 image messages
+        socketWhatsApp.on('image', (base64Image) => {
+            const imageElement = document.getElementById('whatsappImage');
+            imageElement.src = `data:image/png;base64,${base64Image}`;
+            console.log(base64Image)
+        });
+    </script>
+</body>
+</html>
