@@ -45,12 +45,6 @@ interface QueueItem {
   resolve: (value: any) => void;
   reject: (reason?: any) => void;
 }
-type FailedMessage = {
-  contactName?: string;
-  phoneNumber?: string;
-  message: string;
-  error: string;
-};
 
 const newMessage = async (content: {
   phoneNumber?: string;
@@ -71,23 +65,99 @@ const newMessage = async (content: {
     throw new Error("Failed to save message");
   }
 };
+async function checkUnreadMessages() {
+  try {
+    if (!context.page) return;
 
-let failedMessages: FailedMessage[] = [];
+    // Logic to check for unread messages
+    // This is a placeholder - you'll need to implement the actual logic
+    await delay(5000);
+    // Example: Check for unread message indicators
+    // const unreadChats = await context.page.$$eval(
+    //   'span[aria-label*="unread message"]',
+    //   (elements) => elements.length
+    // );
+
+    // if (unreadChats > 0) {
+    //   console.log(`Found ${unreadChats} chats with unread messages`);
+    //   // Here you can add logic to handle unread messages
+    // }
+  } catch (error) {
+    console.error("Error checking unread messages:", error);
+  }
+}
+
+interface QueueItem {
+  task: () => Promise<any>;
+  resolve: (value: any) => void;
+  reject: (reason?: any) => void;
+}
+
 class RequestQueue {
   private queue: QueueItem[] = [];
   private isProcessing: boolean = false;
+  private isLowPriority: boolean = false;
+  private intervalId: NodeJS.Timeout | null = null;
 
-  enqueue(task: () => Promise<any>): Promise<any> {
-    return new Promise((resolve, reject) => {
-      this.queue.push({ task, resolve, reject });
-      this.processQueue();
-    });
+  constructor() {
+    this.startPeriodicChecks();
   }
 
-  private async processQueue() {
-    if (this.isProcessing || this.queue.length === 0) return;
+  async pause() {
+    while (this.isProcessing) {
+      await delay(0);
+    }
+    this.isLowPriority = true;
+  }
+
+  async resume() {
+    while (this.isProcessing) {
+      await delay(0);
+    }
+
+    this.isLowPriority = false;
+  }
+
+  private startPeriodicChecks() {
+    if (!this.intervalId) {
+      this.intervalId = setInterval(async () => {
+        await this.performChecksAndTasks();
+      }, 1000) as NodeJS.Timeout;
+    }
+  }
+
+  private async performChecksAndTasks() {
+    console.log(
+      "isProcessing : ",
+      this.isProcessing,
+      ", isLowPriority : ",
+      this.isLowPriority
+    );
+
+    if (this.isProcessing || this.isLowPriority) return;
 
     this.isProcessing = true;
+
+    try {
+      console.log("--- check messages : start");
+      await checkUnreadMessages();
+      console.log("--- check messages : end");
+
+      if (this.queue.length > 0) {
+        console.log("--- check task : start");
+        await this.processNextTask();
+        console.log("--- check task : end");
+      }
+    } catch (error) {
+      console.error("Error in performChecksAndTasks:", error);
+    } finally {
+      this.isProcessing = false;
+    }
+  }
+
+  private async processNextTask() {
+    if (this.queue.length === 0) return;
+
     const { task, resolve, reject } = this.queue.shift()!;
 
     try {
@@ -95,9 +165,18 @@ class RequestQueue {
       resolve(result);
     } catch (error) {
       reject(error);
-    } finally {
-      this.isProcessing = false;
-      this.processQueue();
+    }
+  }
+
+  enqueue(task: () => Promise<any>): Promise<any> {
+    return new Promise((resolve, reject) => {
+      this.queue.push({ task, resolve, reject });
+    });
+  }
+
+  stopPeriodicChecks() {
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
     }
   }
 }
@@ -142,6 +221,7 @@ async function init() {
       await initializeBrowser();
       console.log("Browser Started");
       whatsappInitialized = true;
+      requestQueue;
     } catch (error) {
       console.error("Failed to start the browser:", error);
       process.exit(1);
@@ -253,7 +333,7 @@ async function openContact(contactName?: string): Promise<void> {
     );
     await context.page.waitForNetworkIdle({ timeout: 10000 });
     await click(`[role="listitem"]:has([title="${contactName}"])`);
-  } catch (error: any) {
+  } catch (error) {
     console.log(error);
     throw new Error("Cannot open contact.");
   }
@@ -270,10 +350,91 @@ async function verifyChat(user: string): Promise<void> {
     const heading = profile?.replaceAll(" ", "");
     const isVerified = heading?.includes(user.replaceAll(" ", ""));
 
-    if (!isVerified) throw new Error("Cant Match Contact Name or Phone Number");
+    if (!isVerified)
+      throw new Error("Can't Match Contact Name or Phone Number");
   } catch (error) {
     console.log(error);
     throw new Error("Cannot verify chat.");
+  }
+}
+
+async function isLoggedIn(): Promise<boolean> {
+  if (!context.page) return false;
+  await context.page.waitForNetworkIdle({ timeout: 5000 });
+  try {
+    await context.page.waitForSelector('[aria-label="Chats"]', {
+      timeout: 500,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function waitForQRLogin(req: Request): Promise<boolean> {
+  let lastQRCode = "";
+  while (true) {
+    try {
+      if (!context.page) throw new Error("Page not initialized");
+      const qrCodeSelector = "div[data-ref]:has(canvas)";
+      await context.page.waitForSelector(qrCodeSelector, { timeout: 5000 });
+      const currentQRCode = await context.page.$eval(
+        qrCodeSelector,
+        (el: Element) => (el as HTMLDivElement).dataset.ref || ""
+      );
+      if (currentQRCode !== lastQRCode) {
+        lastQRCode = currentQRCode;
+        await takeQRCode(req);
+        console.log("New QR code detected, updated screenshot");
+      }
+    } catch (error) {
+      console.log("QR code not found, checking if logged in : ", error);
+      if (await isLoggedIn()) {
+        console.log("Successfully logged in via QR code");
+        await deleteScreenshot();
+        return true;
+      }
+    }
+    await delay(1000);
+  }
+}
+
+export async function sendWhatsappMessage(data: {
+  contactName?: string;
+  message: string;
+  phoneNumber?: string;
+}): Promise<void> {
+  const { contactName, message, phoneNumber } = data;
+
+  if (!contactName && !phoneNumber) {
+    throw new Error("Either contactName or phoneNumber is required");
+  }
+
+  if (!(await isLoggedIn())) {
+    throw new Error("WhatsApp not logged in");
+  }
+
+  try {
+    await resetSearch();
+    if (contactName) {
+      await openContact(contactName);
+    } else if (contactName && phoneNumber) {
+      try {
+        await openContact(contactName);
+      } catch {
+        await openPhone(phoneNumber);
+      }
+    } else if (phoneNumber) {
+      await openPhone(phoneNumber);
+    }
+    await verifyChat(contactName || phoneNumber || "");
+    await sendMessage(message);
+    await resetSearch();
+    await closeChat();
+    console.log("Message sent successfully!");
+  } catch (error) {
+    console.error("Error sending message:", error);
+    throw error;
   }
 }
 
@@ -329,19 +490,6 @@ async function deleteScreenshot(): Promise<void> {
   }
 }
 
-async function isLoggedIn(): Promise<boolean> {
-  if (!context.page) return false;
-  await context.page.waitForNetworkIdle({ timeout: 5000 });
-  try {
-    await context.page?.waitForSelector('[aria-label="Chats"]', {
-      timeout: 500,
-    });
-    return true;
-  } catch (error) {
-    return false;
-  }
-}
-
 async function takeQRCode(req: Request): Promise<string> {
   try {
     if (!context.page) throw new Error("Page not initialized");
@@ -367,34 +515,6 @@ async function getLinkCode(): Promise<string> {
       : "";
   });
   return linkCode || "";
-}
-
-async function waitForQRLogin(req: Request): Promise<boolean> {
-  let lastQRCode: string = "";
-  while (true) {
-    try {
-      if (!context.page) throw new Error("Page not initialized");
-      const qrCodeSelector = "div[data-ref]:has(canvas)";
-      await context.page?.waitForSelector(qrCodeSelector, { timeout: 5000 });
-      const currentQRCode = await context.page?.$eval(
-        qrCodeSelector,
-        (el: Element) => (el as HTMLDivElement).dataset.ref || ""
-      );
-      if (currentQRCode !== lastQRCode) {
-        lastQRCode = currentQRCode;
-        await takeQRCode(req);
-        console.log("New QR code detected, updated screenshot");
-      }
-    } catch (error) {
-      console.log("QR code not found, checking if logged in : ", error);
-      if (await isLoggedIn()) {
-        console.log("Successfully logged in via QR code");
-        await deleteScreenshot();
-        return true;
-      }
-    }
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-  }
 }
 
 async function click(selector: string) {
@@ -537,7 +657,8 @@ router.get("/stream", async function (req, res, next) {
 
   res.write(`<!-- keepalive ${Date.now()} -->\n`);
   // Function to sleep for a specified number of milliseconds
-  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  const sleep = (ms: number) =>
+    new Promise((resolve) => setTimeout(resolve, ms));
 
   try {
     while (true) {
@@ -556,7 +677,7 @@ router.get("/stream", async function (req, res, next) {
       // Wait for a short period before taking the next screenshot
       await sleep(0); // Adjust this value to control the frame rate
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error:", error);
     res.write(
       `<script>document.body.innerHTML += "<p>Error: ${error.message}</p>";</script>`
@@ -613,69 +734,37 @@ export function addMessageToQueue(data: {
   requestQueue.enqueue(async () => {
     let savedMessage: any = null;
     let user: any = null;
+    const isTesting = data.userId == "test";
     try {
-      user = await User.findById(data.userId);
-      console.log(user);
+      if (isTesting) user = { phone: 9323232961, contact: "Pradyut Das 444" };
+      else {
+        user = await User.findById(data.userId);
+        savedMessage = await newMessage(data);
+      }
       const phoneNumber = user?.phone;
       const contactName = user?.contact || undefined;
-      savedMessage = await newMessage(data);
       await sendWhatsappMessage({
         contactName,
         phoneNumber,
         message: data.message,
       });
-      savedMessage.failed = false;
-      await savedMessage.save();
+      if (!isTesting) {
+        savedMessage.failed = false;
+        await savedMessage.save();
+      }
     } catch (error: any) {
       console.error("Error sending message:", error);
       const screenshot = "/" + Date.now() + ".png";
       const screenshotPath = "./public/whatsapp/errors/" + screenshot;
-      await context.page?.screenshot({ path: screenshotPath });
-      savedMessage.screen = screenshot;
-      savedMessage.error = error.message || String(error);
-      await savedMessage.save();
+      if (!isTesting) {
+        await context.page?.screenshot({ path: screenshotPath });
+        savedMessage.screen = screenshot;
+        savedMessage.error = error.message || String(error);
+        await savedMessage.save();
+      }
       await context.page?.reload({ waitUntil: "networkidle0" });
     }
   });
-}
-
-export async function sendWhatsappMessage(data: {
-  contactName?: string;
-  message: string;
-  phoneNumber?: string;
-}): Promise<void> {
-  const { contactName, message, phoneNumber } = data;
-
-  if (!contactName && !phoneNumber) {
-    throw new Error("Either contactName or phoneNumber is required");
-  }
-
-  if (!(await isLoggedIn())) {
-    throw new Error("WhatsApp not logged in");
-  }
-
-  try {
-    await resetSearch();
-    if (contactName) {
-      await openContact(contactName);
-    } else if (contactName && phoneNumber) {
-      try {
-        await openContact(contactName);
-      } catch {
-        await openPhone(phoneNumber);
-      }
-    } else if (phoneNumber) {
-      await openPhone(phoneNumber);
-    }
-    await verifyChat((contactName as string) || (phoneNumber as string));
-    await sendMessage(message);
-    await resetSearch();
-    await closeChat();
-    console.log("Message sent successfully!");
-  } catch (error: any) {
-    console.error("Error sending message:", error);
-    throw error;
-  }
 }
 
 router.get("/failed-messages", async (req: Request, res: Response) => {
@@ -687,11 +776,11 @@ router.get("/failed-messages", async (req: Request, res: Response) => {
 
 router.post("/retry-failed-messages", async (req: Request, res: Response) => {
   let messages = { failed: 0, success: 0 };
-
+  let failedMessages = [];
   try {
-    const failedMessages = (await Message.find({
+    failedMessages = (await Message.find({
       failed: true,
-    })) as (FailedMessage & any)[];
+    })) as any[];
 
     for (const failedMessage of failedMessages) {
       try {
@@ -813,6 +902,7 @@ router.post("/send-test-message", async (req: Request, res: Response) => {
     return;
   }
 
+  await requestQueue.pause();
   try {
     await sendWhatsappMessage({ contactName, message, phoneNumber });
     res.json({ success: true, message: "Sent test message." });
@@ -822,6 +912,8 @@ router.post("/send-test-message", async (req: Request, res: Response) => {
       message: `Failed to send test message : ${error.message}`,
     });
     await context.page?.reload({ waitUntil: "networkidle0" });
+  } finally {
+    await requestQueue.resume();
   }
 });
 
@@ -841,6 +933,7 @@ router.get("/screenshot", async (req: Request, res: Response) => {
 
 process.on("SIGINT", async () => {
   console.log("Closing browser and shutting down server...");
+  requestQueue.stopPeriodicChecks();
   if (context.browser) {
     try {
       await context.browser.close();
