@@ -6,6 +6,7 @@ import path from "path";
 import Jimp from "jimp";
 // @ts-ignore
 import QrCode from "qrcode-reader";
+import { format, isAfter, parse } from "date-fns";
 
 const router = express.Router();
 
@@ -65,27 +66,6 @@ const newMessage = async (content: {
     throw new Error("Failed to save message");
   }
 };
-async function checkUnreadMessages() {
-  try {
-    if (!context.page) return;
-
-    // Logic to check for unread messages
-    // This is a placeholder - you'll need to implement the actual logic
-    await delay(5000);
-    // Example: Check for unread message indicators
-    // const unreadChats = await context.page.$$eval(
-    //   'span[aria-label*="unread message"]',
-    //   (elements) => elements.length
-    // );
-
-    // if (unreadChats > 0) {
-    //   console.log(`Found ${unreadChats} chats with unread messages`);
-    //   // Here you can add logic to handle unread messages
-    // }
-  } catch (error) {
-    console.error("Error checking unread messages:", error);
-  }
-}
 
 interface QueueItem {
   task: () => Promise<any>;
@@ -127,21 +107,12 @@ class RequestQueue {
   }
 
   private async performChecksAndTasks() {
-    console.log(
-      "isProcessing : ",
-      this.isProcessing,
-      ", isLowPriority : ",
-      this.isLowPriority
-    );
-
     if (this.isProcessing || this.isLowPriority) return;
 
     this.isProcessing = true;
 
     try {
-      console.log("--- check messages : start");
-      await checkUnreadMessages();
-      console.log("--- check messages : end");
+      await fetchUnreadMessages();
 
       if (this.queue.length > 0) {
         console.log("--- check task : start");
@@ -213,6 +184,161 @@ async function initializeBrowser(): Promise<void> {
   }
 }
 let whatsappInitialized = false;
+
+async function controlNetworkConditions(offline: boolean) {
+  if (!context.page) return;
+  const client = await context.page?.target().createCDPSession();
+  await client.send("Network.enable");
+  await client.send("Network.emulateNetworkConditions", {
+    offline,
+    downloadThroughput: offline ? 0 : -1,
+    uploadThroughput: offline ? 0 : -1,
+    latency: 0,
+  });
+}
+
+async function resetSearch(): Promise<void> {
+  if (!context.page) return;
+  await context.page?.waitForNetworkIdle({ timeout: 10000 });
+  try {
+    await context.page?.waitForSelector('[aria-label="Cancel search"]', {
+      timeout: 500,
+    });
+    await context.page?.click('[aria-label="Cancel search"]');
+  } catch (error) {}
+}
+
+async function closeChat() {
+  if (!context.page) return;
+
+  try {
+    await context.page?.waitForSelector('#main [aria-label="Menu"]', {
+      timeout: 500,
+    });
+    await context.page?.click('#main [aria-label="Menu"]');
+    await context.page?.waitForSelector('[role="application"]', {
+      timeout: 1000,
+    });
+    await context.page?.waitForSelector(
+      '[role="application"] [aria-label="Close chat"]',
+      {
+        timeout: 1000,
+      }
+    );
+    await context.page?.click('[role="application"] [aria-label="Close chat"]');
+  } catch (error) {}
+}
+
+async function fetchUnreadMessages() {
+  if (!context.page) return [];
+
+  await context.page?.waitForSelector("[aria-label='Chat list']", {
+    timeout: 60000,
+  });
+
+  await resetSearch();
+
+  let unreads = await context.page?.evaluate(() => {
+    return Array.from(
+      document.querySelectorAll(
+        "[aria-label='Chat list'] [role='listitem']:has([aria-label*='unread message']) [role='gridcell'] span[title]"
+      )
+    ).map((_) => _.textContent);
+  });
+
+  if (unreads.length === 0) return [];
+  unreads = unreads.filter((_) => {
+    if (
+      _ == "Palakkk" ||
+      _ == "Pradyut Das 444" ||
+      _ == "Vidhi" ||
+      _ == "Ujwal" ||
+      _ == "Shrish Classes"
+    ) {
+      return true;
+    }
+    return false;
+  });
+
+  await closeChat();
+  await Promise.all(
+    unreads.map(async (contact) => {
+      await controlNetworkConditions(false);
+      await context.page?.click(`span[title="${contact}"]`);
+      await context.page?.waitForNetworkIdle({ timeout: 10000 });
+      await controlNetworkConditions(true);
+      await context.page?.waitForSelector(".message-in", { timeout: 10000 });
+      const messages = await context.page?.evaluate(() => {
+        let messages: any[] = [];
+        document
+          .querySelectorAll('.message-in [class*="copyable-text"] > div')
+          .forEach((elem) => {
+            let text = "";
+            try {
+              ((
+                elem.querySelector("span[aria-label] span") as HTMLElement
+              )?.childNodes).forEach((_: ChildNode) => {
+                const n = _.nodeName;
+                if (n == "#text") {
+                  text += (_.textContent || "").trim();
+                }
+                if (n == "IMG") {
+                  const imgElement = _ as HTMLElement;
+                  text += imgElement.getAttribute("alt");
+                }
+              });
+            } catch (error) {
+              ((
+                elem.querySelector("span[class]") as HTMLElement
+              )?.childNodes).forEach((_: ChildNode) => {
+                const n = _.nodeName;
+                if (n == "#text") {
+                  text += (_.textContent || "").trim();
+                }
+                if (n == "IMG") {
+                  const imgElement = _ as HTMLElement;
+                  text += imgElement.getAttribute("alt");
+                }
+              });
+            }
+            const time =
+              ((
+                (
+                  (elem as HTMLElement).parentElement
+                    ?.parentElement as HTMLElement
+                ).querySelector(
+                  "div:nth-of-type(2) > div > span"
+                ) as HTMLElement
+              )?.innerText as string) || "-";
+            messages.push({ text, time });
+          });
+        return messages;
+      });
+      try {
+        const newMessages = getMessagesAfterAMessage(
+          store[contact as string],
+          messages
+        );
+        console.log(newMessages);
+        await context.page?.waitForSelector(
+          '#main div[contenteditable="true"][data-tab="10"]'
+        );
+
+        await context.page?.type(
+          '#main div[contenteditable="true"][data-tab="10"]',
+          "lysm 🥰"
+        );
+        await context.page?.keyboard.press("Enter");
+        updateStore(
+          contact as string,
+          messages?.[messages?.length - 1] ?? messages?.[0]
+        );
+      } catch (error) {}
+    })
+  );
+  await closeChat();
+  controlNetworkConditions(false);
+}
 
 async function init() {
   if (!whatsappInitialized) {
@@ -320,21 +446,41 @@ async function detectAndCropQRCode(path: string, req: Request): Promise<void> {
   }
 }
 
-async function openContact(contactName?: string): Promise<void> {
-  if (!contactName) return;
+async function openContact(contactName: string): Promise<void> {
+  if (!context.page) return;
   try {
-    if (!context.page) throw new Error("Page not initialized");
-    await context.page.waitForSelector(
-      'div:has(button[aria-label="Search or start new chat"]) div [contenteditable="true"]'
+    await resetSearch();
+    await context.page?.waitForSelector(
+      '#side div[contenteditable="true"][data-tab="3"]',
+      { timeout: 1000 }
     );
-    await context.page.type(
-      'div:has(button[aria-label="Search or start new chat"]) div [contenteditable="true"]',
+    await context.page?.type(
+      '#side div[contenteditable="true"][data-tab="3"]',
       contactName
     );
-    await context.page.waitForNetworkIdle({ timeout: 10000 });
-    await click(`[role="listitem"]:has([title="${contactName}"])`);
+    try {
+      await context.page?.waitForSelector('[aria-label="Cancel search"]', {
+        timeout: 1000,
+      });
+    } catch (error) {
+      console.log("Contact not found");
+      await context.page?.waitForNetworkIdle({ timeout: 10000 });
+    }
+    await context.page?.click(`span[title="${contactName}"]`);
+    await context.page?.waitForNetworkIdle({ timeout: 10000 });
+    try {
+      await context.page?.waitForSelector(
+        'div[aria-label="Scroll to bottom"]',
+        {
+          timeout: 500,
+        }
+      );
+      await context.page?.click('div[aria-label="Scroll to bottom"]');
+    } catch (error) {
+      console.log("No need to scroll to bottom");
+    }
   } catch (error) {
-    console.log(error);
+    console.log("Open contact error:", error);
     throw new Error("Cannot open contact.");
   }
 }
@@ -343,7 +489,7 @@ async function verifyChat(user: string): Promise<void> {
   try {
     if (!context.page) throw new Error("Page not initialized");
 
-    const profile = await context.page.$eval(
+    const profile = await context.page?.$eval(
       'header:has([title="Profile details"])',
       (el) => el.textContent
     );
@@ -360,9 +506,9 @@ async function verifyChat(user: string): Promise<void> {
 
 async function isLoggedIn(): Promise<boolean> {
   if (!context.page) return false;
-  await context.page.waitForNetworkIdle({ timeout: 5000 });
+  await context.page?.waitForNetworkIdle({ timeout: 5000 });
   try {
-    await context.page.waitForSelector('[aria-label="Chats"]', {
+    await context.page?.waitForSelector('[aria-label="Chats"]', {
       timeout: 500,
     });
     return true;
@@ -377,8 +523,8 @@ async function waitForQRLogin(req: Request): Promise<boolean> {
     try {
       if (!context.page) throw new Error("Page not initialized");
       const qrCodeSelector = "div[data-ref]:has(canvas)";
-      await context.page.waitForSelector(qrCodeSelector, { timeout: 5000 });
-      const currentQRCode = await context.page.$eval(
+      await context.page?.waitForSelector(qrCodeSelector, { timeout: 5000 });
+      const currentQRCode = await context.page?.$eval(
         qrCodeSelector,
         (el: Element) => (el as HTMLDivElement).dataset.ref || ""
       );
@@ -442,39 +588,23 @@ async function openPhone(phoneNumber?: string): Promise<void> {
   if (!phoneNumber) return;
   try {
     if (!context.page) throw new Error("Page not initialized");
-    const url = `https://web.whatsapp.com/send?phone=${phoneNumber}`;
+    const url = `https://web.context.page?.com/send?phone=${phoneNumber}`;
     await context.page?.goto(url, { waitUntil: "networkidle0" });
-    await context.page.waitForNavigation();
-    await context.page.waitForNetworkIdle();
+    await context.page?.waitForNavigation();
+    await context.page?.waitForNetworkIdle();
   } catch (error) {
     console.log(error);
     throw new Error("Cannot open Phone Number.");
   }
 }
 
-async function resetSearch(): Promise<void> {
-  if (!context.page) throw new Error("Page not initialized");
-  const inputValue = await context.page.$eval(
-    'div:has(button[aria-label="Search or start new chat"]) div [contenteditable="true"]',
-    (el) => el.textContent
-  );
-  await context.page.type(
-    'div:has(button[aria-label="Search or start new chat"]) div [contenteditable="true"]',
-    " "
-  );
-  for (let i = 0; i < (inputValue || "").length + 1; i++) {
-    await context.page.keyboard.press("Backspace");
-  }
-  await click('[aria-label="Chat list"]:has([data-icon="search"])');
-}
-
 async function sendMessage(message: string): Promise<void> {
   try {
     if (!context.page) throw new Error("Page not initialized");
-    await context.page.waitForSelector('[aria-placeholder="Type a message"]');
-    await context.page.type('[aria-placeholder="Type a message"]', message);
-    await context.page.keyboard.press("Enter");
-    await context.page.waitForNetworkIdle({ timeout: 2000 });
+    await context.page?.waitForSelector('[aria-placeholder="Type a message"]');
+    await context.page?.type('[aria-placeholder="Type a message"]', message);
+    await context.page?.keyboard.press("Enter");
+    await context.page?.waitForNetworkIdle({ timeout: 2000 });
   } catch (error) {
     console.log(error);
     throw new Error("Message was not sent.");
@@ -517,115 +647,155 @@ async function getLinkCode(): Promise<string> {
   return linkCode || "";
 }
 
-async function click(selector: string) {
-  await context.page?.waitForSelector(selector, {
-    timeout: 2000,
-  });
-  const offset = (await context.page?.evaluate((selector) => {
-    const el = document.querySelector(selector);
-    const { x, y } = (el as HTMLElement).getBoundingClientRect() as {
-      x: number;
-      y: number;
-    };
-    return { x: x + 2, y: y + 2 };
-  }, selector)) as { x: number; y: number };
-  await context.page?.mouse.click(offset.x, offset.y);
-}
-
-async function closeChat() {
-  await context.page?.waitForNetworkIdle({ timeout: 5000 });
-  await context.page?.$eval('#main [aria-label="Menu"]', (el) =>
-    (el as HTMLElement).click()
-  );
-  await delay(1000);
-  await context.page?.$eval('li:has([aria-label="Close chat"])', (el) =>
-    (el as HTMLElement).click()
-  );
-}
-
 async function newGroup(name: string, contacts: string[]) {
   if (!context.page) throw Error;
 
-  await context.page.$eval('[aria-label="Menu"]', (el) =>
-    (el as HTMLElement).click()
-  );
-  await delay(1000);
-  await context.page.$eval('[aria-label="New group"]', (el) =>
-    (el as HTMLElement).click()
-  );
+  try {
+    await context.page?.waitForSelector(`[aria-label="Menu"][title="Menu"]`, {
+      timeout: 2000,
+    });
+    await context.page?.click(`[aria-label="Menu"][title="Menu"]`);
+    await context.page.waitForNetworkIdle({ timeout: 10000 });
+    await delay(1000);
+    await context.page?.waitForSelector(
+      `[aria-label="New group"][role="button"]`,
+      { timeout: 0 }
+    );
+    await context.page?.click(`[aria-label="New group"][role="button"]`);
+    await context.page.waitForNetworkIdle({ timeout: 10000 });
 
-  for (const contact of contacts) {
-    await context.page?.type("header + div input", contact);
-    await openContact(contact);
+    for (const contact of contacts) {
+      try {
+        await context.page?.waitForSelector(
+          `[placeholder="Search name or number"]`,
+          { timeout: 500 }
+        );
+        await context.page?.type(
+          `[placeholder="Search name or number"]`,
+          contact
+        );
+      } catch (error) {
+        await context.page?.waitForSelector(`[placeholder=" "]`);
+        await context.page?.type(`[placeholder=" "]`, contact);
+      }
+      await context.page.waitForNetworkIdle({ timeout: 10000 });
+      await context.page?.click(`[title="${contact}"]`);
+      await context.page.waitForNetworkIdle({ timeout: 10000 });
+    }
+    await context.page?.click(`[aria-label="Next"]`);
+    await context.page.waitForNetworkIdle({ timeout: 10000 });
+    await context.page?.type(
+      `[title="Group subject (optional)"][contenteditable="true"]`,
+      name
+    );
+    await context.page.waitForNetworkIdle({ timeout: 10000 });
+    await context.page?.click(`[aria-label="Create group"]`);
+    await context.page.waitForNetworkIdle({ timeout: 10000 });
+  } catch (error) {
+    console.error("Error fetching unread messages:", error);
+    throw error;
+  } finally {
+    await closeChat();
   }
-
-  await delay(500);
-  await context.page.waitForSelector('[aria-label="Next"]');
-  await context.page.$eval('[aria-label="Next"]', (el) =>
-    (el as HTMLElement).click()
-  );
-  await context.page.waitForNetworkIdle({ timeout: 5000 });
-  await delay(1000);
-  await context.page.waitForSelector('[title="Group subject (optional)"]');
-  await context.page.type('[title="Group subject (optional)"]', name);
-  await delay(500);
-  await context.page.waitForSelector('[aria-label="Create group"]');
-  await context.page.$eval('[aria-label="Create group"]', (el) =>
-    (el as HTMLElement).click()
-  );
-  await context.page.waitForNetworkIdle({ timeout: 5000 });
-  await delay(2000);
-  await resetSearch();
-  await closeChat();
 }
+
 async function getInviteLink(groupName: string) {
   await openContact(groupName);
-  await context.page?.$eval('[title="Profile details"]', (el) =>
-    (el as HTMLElement).click()
+  await controlNetworkConditions(true);
+  await context.page?.waitForNetworkIdle({ timeout: 10000 });
+  await context.page?.waitForSelector(`[title="Profile details"]`, {
+    timeout: 5000,
+  });
+  await context.page?.click(`[title="Profile details"]`);
+  await context.page?.waitForNetworkIdle({ timeout: 10000 });
+  await context.page?.waitForSelector(
+    `header:has(div[title="Group info"]) + div section > div:nth-last-of-type(2) > div:nth-of-type(2) > div:nth-of-type(2)`,
+    { timeout: 5000 }
   );
-  await context.page?.$eval('[role="button"]:has([data-icon="link"])', (el) =>
-    (el as HTMLElement).click()
+  await context.page?.click(
+    `header:has(div[title="Group info"]) + div section > div:nth-last-of-type(2) > div:nth-of-type(2) > div:nth-of-type(2)`
   );
-  await delay(1000);
+  await context.page?.waitForNetworkIdle({ timeout: 10000 });
+  await context.page?.waitForSelector(`[id="group-invite-link-anchor"]`, {
+    timeout: 5000,
+  });
   const inviteLink = await context.page?.$eval(
-    "a#group-invite-link-anchor",
-    (el) => (el as HTMLElement).getAttribute("href")
+    '[id="group-invite-link-anchor"]',
+    (el) => el.getAttribute("href") as string
   );
+  await context.page?.waitForNetworkIdle({ timeout: 10000 });
+  await context.page?.click(`header [aria-label="Back"]`);
   await closeChat();
+  await controlNetworkConditions(false);
+
   return inviteLink;
 }
+
 async function removeFromGroup(name: string, contacts: string[]) {
-  await openContact(name);
-  await context.page?.waitForNetworkIdle({ timeout: 10000 });
-  await delay(1000);
-  await context.page?.$eval('[title="Profile details"]', (el) =>
-    (el as HTMLElement).click()
-  );
-  await context.page?.waitForNetworkIdle({ timeout: 10000 });
-  await delay(1000);
-  await context.page?.$eval('[role="button"]:has([data-icon="search"])', (el) =>
-    (el as HTMLElement).click()
-  );
-  await context.page?.waitForNetworkIdle({ timeout: 10000 });
-  await delay(1000);
-  for (const contact of contacts) {
-    await openContact(contact);
-    await context.page?.waitForNetworkIdle({ timeout: 10000 });
-    await delay(1000);
-    await context.page?.$eval('li:has([aria-label="Remove"])', (el) =>
-      (el as HTMLElement).click()
-    );
-    console.log("Removed " + contact);
-    await context.page?.waitForNetworkIdle({ timeout: 10000 });
-    await resetSearch();
-  }
-  await delay(2000);
-  await context.page?.$eval('[role="button"]:has([data-icon="x"])', (el) =>
-    (el as HTMLElement).click()
-  );
-  await delay(2000);
   await resetSearch();
-  await closeChat();
+  try {
+    await openContact(name);
+    await context.page?.waitForSelector(`[title="Profile details"]`, {
+      timeout: 5000,
+    });
+    await context.page?.click(`[title="Profile details"]`);
+    await context.page?.waitForNetworkIdle({ timeout: 10000 });
+    await context.page?.waitForSelector(
+      '[role="button"]:has([data-icon="search"])'
+    );
+    await context.page?.click(`[role="button"]:has([data-icon="search"])`);
+    await context.page?.waitForNetworkIdle({ timeout: 10000 });
+    for (const contact of contacts) {
+      try {
+        await context.page?.waitForSelector(
+          `[aria-label="Search members"] div[contenteditable="true"]`
+        );
+        await context.page?.type(
+          `[aria-label="Search members"] div[contenteditable="true"]`,
+          contact
+        );
+        await context.page?.waitForNetworkIdle({ timeout: 10000 });
+        await context.page?.click(
+          `[aria-label="Search members"] [title="${contact}"]`
+        );
+        await context.page?.waitForNetworkIdle({ timeout: 10000 });
+        await delay(1000);
+        await context.page?.waitForSelector(`[role="application"]`, {
+          timeout: 5000,
+        });
+        await context.page?.waitForSelector(
+          `[role="application"] [aria-label="Remove"]`,
+          { timeout: 5000 }
+        );
+        await context.page?.click(`[role="application"] [aria-label="Remove"]`);
+        await context.page?.waitForNetworkIdle({ timeout: 10000 });
+      } catch (error) {
+      } finally {
+        await context.page?.waitForSelector(
+          '[aria-label="Search members"] [aria-label="Cancel search"]',
+          {
+            timeout: 500,
+          }
+        );
+        await context.page?.click(
+          '[aria-label="Search members"] [aria-label="Cancel search"]'
+        );
+      }
+    }
+    await context.page?.waitForSelector(
+      `[aria-label="Search members"] [aria-label="Close"]`
+    );
+    await context.page?.click(
+      `[aria-label="Search members"] [aria-label="Close"]`
+    );
+    await context.page?.waitForNetworkIdle({ timeout: 10000 });
+  } catch (error) {
+    console.log(error);
+    throw error;
+  } finally {
+    await resetSearch();
+    await closeChat();
+  }
 }
 
 router.get("/stream", async function (req, res, next) {
@@ -666,7 +836,7 @@ router.get("/stream", async function (req, res, next) {
         throw new Error("Page not initialized");
       }
 
-      const screenshot = await context.page.screenshot({ encoding: "base64" });
+      const screenshot = await context.page?.screenshot({ encoding: "base64" });
 
       // Send a script to update the image
       res.write(`<script>updateImage("${screenshot}");</script>`);
@@ -687,23 +857,50 @@ router.get("/stream", async function (req, res, next) {
   }
 });
 
+type Message = { text: string; time: string };
+type Store = { [key: string]: Message };
+let store: Store = {};
+
+function updateStore(contact: string, message: Message) {
+  store[contact] = message;
+}
+
+function getMessagesAfterAMessage(
+  message: Message,
+  messages: Message[] | undefined
+): Message[] {
+  if (!messages) {
+    return [];
+  }
+  const index = messages.findIndex(
+    (item) =>
+      item?.text === (message?.text || " ") &&
+      item?.time === (message?.time || " ")
+  );
+  if (index === -1) {
+    return [messages[messages.length - 1]];
+  }
+  return messages.slice(index + 1);
+}
+
 router.get("/testing", async (req: Request, res: Response) => {
   try {
     if (!context.page) throw new Error("Page not initialized");
-
-    const name = "batch 4r";
-    const contacts = ["Pradyut Das 444", "Mayuresh Patil"];
+    let name = "test group " + Math.round(Math.random() * 1000);
+    let contacts = ["Pradyut Das 444"];
 
     // TODO : implement NLP
-    // TODO : unread messages
-
+    await newGroup(name, contacts);
+    await removeFromGroup(name, contacts);
     res.json({ success: true });
   } catch (error: any) {
     console.log(error);
     // await context.page?.reload({ waitUntil: "networkidle0" });
     res.json({ success: false });
+  } finally {
   }
 });
+
 router.get("/login", async (req: Request, res: Response) => {
   try {
     if (await isLoggedIn()) {
@@ -841,11 +1038,11 @@ router.post("/logout", async (req: Request, res: Response) => {
       res.status(400).json({ success: false, message: "Not logged in" });
       return;
     }
-    await context.page.waitForNetworkIdle({ timeout: 10000 });
-    await context.page.waitForSelector('div[aria-label="Menu"]', {
+    await context.page?.waitForNetworkIdle({ timeout: 10000 });
+    await context.page?.waitForSelector('div[aria-label="Menu"]', {
       timeout: 1000,
     });
-    await context.page.click('div[aria-label="Menu"]');
+    await context.page?.click('div[aria-label="Menu"]');
     await delay(1000);
     await context.page?.waitForSelector('div[aria-label="Log out"]', {
       timeout: 1000,
@@ -859,7 +1056,7 @@ router.post("/logout", async (req: Request, res: Response) => {
     await context.page?.click(
       'div[aria-label="Log out?"] button:nth-of-type(2)'
     );
-    await context.page.waitForNetworkIdle({ timeout: 10000 });
+    await context.page?.waitForNetworkIdle({ timeout: 10000 });
     whatsappInitialized = false;
     await context.browser?.close();
     context = {};
@@ -902,7 +1099,6 @@ router.post("/send-test-message", async (req: Request, res: Response) => {
     return;
   }
 
-  await requestQueue.pause();
   try {
     await sendWhatsappMessage({ contactName, message, phoneNumber });
     res.json({ success: true, message: "Sent test message." });
@@ -913,7 +1109,6 @@ router.post("/send-test-message", async (req: Request, res: Response) => {
     });
     await context.page?.reload({ waitUntil: "networkidle0" });
   } finally {
-    await requestQueue.resume();
   }
 });
 
