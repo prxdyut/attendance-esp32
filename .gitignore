@@ -2,3 +2,6 @@ backend/node_modules
 backend/data/
 frontend/node_modules
 mongodb/data
+dev/minio
+mongo
+backend/public/whatsapp

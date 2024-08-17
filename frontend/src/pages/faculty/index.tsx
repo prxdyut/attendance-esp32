@@ -34,7 +34,7 @@ export default function useres() {
               <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
             </div>
             <Link
-              to="/useres/new"
+              to="/faculty/new"
               className="inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300"
             >
               <Plus size={20} className="mr-2" />

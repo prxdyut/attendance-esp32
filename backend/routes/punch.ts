@@ -3,12 +3,14 @@ import { NewCard, Punch, User } from "../mongodb/models";
 import { addMessageToQueue } from "./whatsapp";
 import { getMessage } from "../utils/message";
 import { fetchData } from "./statistics";
+import { addDays } from "date-fns";
+import { punchesWebsocket } from "..";
 
 const router = express.Router();
 
 router.get("/", async (req, res) => {
   try {
-    const url = req.protocol + '://' + req.get('host') + req.originalUrl;
+    const url = req.protocol + "://" + req.get("host") + req.originalUrl;
     const params = new URL(url).searchParams;
 
     let uids: any = params.get("uids") as string;
@@ -29,10 +31,10 @@ router.get("/", async (req, res) => {
       );
       res.send("success");
     } else {
-      results = await processPunch(uid, new Date((timestamp)));
+      results = await processPunch(uid, new Date(timestamp));
       res.send("success");
     }
-    console.log(results)
+    console.log(results);
   } catch (error: any) {
     console.error("Error processing punches:", error.message);
     res.status(400).send("error");
@@ -77,7 +79,7 @@ async function processPunch(uid: string, timestamp: Date) {
     const punch = new Punch({ userId: user._id, timestamp });
     await punch.save();
 
-    if (firstPunch)
+    if (firstPunch) {
       addMessageToQueue({
         message: getMessage({
           eventType: "punchIn",
@@ -87,7 +89,7 @@ async function processPunch(uid: string, timestamp: Date) {
         }),
         userId: user._id.toString(),
       });
-    else if (secondPunch)
+    } else if (secondPunch)
       addMessageToQueue({
         message: getMessage({
           eventType: "punchOut",
@@ -107,7 +109,11 @@ async function processPunch(uid: string, timestamp: Date) {
         }),
         userId: user._id.toString(),
       });
-
+    punchesWebsocket.emit("cardPunch", [{
+      name: user.name,
+      uid,
+      time: timestamp,
+    }]);
     return { status: "success", message: "Punch recorded", uid };
   } else {
     const existingPunch = await NewCard.findOne({
@@ -120,7 +126,11 @@ async function processPunch(uid: string, timestamp: Date) {
 
     if (existingPunch) {
       console.warn("Duplicate new punch detected:", existingPunch);
-      return { status: "success", message: "New Punch was already recorded", uid };
+      return {
+        status: "success",
+        message: "New Punch was already recorded",
+        uid,
+      };
     }
 
     const newCard = new NewCard({ uid, timestamp });
@@ -186,6 +196,26 @@ router.get("/absent", async (req, res) => {
       data: {
         absentUsersByDate: Object.fromEntries(absentUsersByDate),
         notifiedUsers: notifiedUsers.length,
+      },
+    });
+  } catch (error: any) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+router.get("/new", async (req, res) => {
+  const { startDate, endDate } = req.query;
+  try {
+    const newCards = await NewCard.find({
+      timestamp: {
+        $gte: startDate ? new Date(startDate as string) : new Date(),
+        $lte: endDate ? addDays(endDate as string, 1) : addDays(new Date(), 1),
+      },
+    });
+    res.json({
+      success: true,
+      data: {
+        newCards,
       },
     });
   } catch (error: any) {

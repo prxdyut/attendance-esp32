@@ -3,6 +3,7 @@ import { Holiday, User } from "../mongodb/models";
 import type { ObjectId } from "mongoose";
 import { addMessageToQueue } from "./whatsapp";
 import { getMessage } from "../utils/message";
+import { endOfDay, startOfDay } from "date-fns";
 
 const router = express.Router();
 
@@ -41,8 +42,21 @@ router.post("/", async (req, res) => {
 
 // Get all holidays
 router.get("/", async (req, res) => {
+  const { startDate, endDate } = req.query;
+  const start = startOfDay(startDate as string);
+
+  const end = endOfDay(endDate as string);
+
   try {
-    const holidays = await Holiday.find();
+    let holidays;
+    if (startDate && endDate)
+      holidays = await Holiday.find({
+        date: {
+          $gte: start,
+          $lte: end,
+        },
+      });
+    else holidays = await Holiday.find();
     res.json({ success: true, data: holidays });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });

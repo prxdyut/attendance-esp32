@@ -14,6 +14,7 @@ type TargetSelectorProps = {
   single?: boolean;
   defaultSelectionType?: SelectionType;
   defaultSelectedOptions?: string[];
+  required?: true
 };
 
 export function TargetSelector({
@@ -23,7 +24,9 @@ export function TargetSelector({
   single,
   defaultSelectedOptions,
   defaultSelectionType,
+  required
 }: TargetSelectorProps) {
+  console.log(defaultSelectedOptions)
   const [isOpen, setIsOpen] = useState(false);
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -36,13 +39,18 @@ export function TargetSelector({
     if (defaultSelectionType) setSelectionType(defaultSelectionType);
     if (defaultSelectedOptions) setSelectedOptions(defaultSelectedOptions);
     if (selectOnly) setSelectionType(selectOnly);
-  }, [defaultSelectionType, defaultSelectedOptions]);
+  }, []);
+
+  useEffect(() => {
+    if (defaultSelectedOptions) setSelectedOptions(defaultSelectedOptions)
+  }, [defaultSelectedOptions]);
 
   useEffect(() => {
     if (selectionType && onSelectionChange) {
       onSelectionChange(selectionType, selectedOptions);
     }
-  }, [selectionType, selectedOptions, onSelectionChange]);
+  }, [selectionType, selectedOptions]);
+
   const popupRef = useRef<HTMLDivElement>(null);
   const [items, setItems] = useState<Item[]>([]);
 
@@ -90,13 +98,15 @@ export function TargetSelector({
     handleFetch(
       "/users?role=all",
       setLoading,
-      (userIds: any[]) => {
+      (userIds: {users: any[]}) => {
+        console.log(userIds)
         items.push({ type: "header", label: "People" });
-        userIds.map((item) => {
+        userIds.users.map((item) => {
           items.push({
             type: "userIds",
             value: item._id as string,
             label: item.name as string,
+
           });
         });
       },
@@ -105,9 +115,10 @@ export function TargetSelector({
     handleFetch(
       "/batches",
       setLoading,
-      (batchIds: any[]) => {
+      (batchIds: {batches: any[]}) => {
         items.push({ type: "header", label: "Batches" });
-        batchIds.map((batch) => {
+        console.log(batchIds)
+        batchIds.batches.map((batch) => {
           items.push({
             type: "batchIds",
             value: batch._id as string,
@@ -141,25 +152,26 @@ export function TargetSelector({
           e.preventDefault();
           setIsOpen(!isOpen);
         }}
+        type='button'
       >
         {selectionType && selectedOptions.length ? (
           <input
-            required
+            required={required}
             readOnly
             value={
               single
                 ? items.filter((item) => item?.value === selectedOptions[0])[0]
-                    ?.label
+                  ?.label
                 : "Selected " +
-                  (selectionType != "all" ? selectedOptions.length : "") +
-                  " " +
-                  selectionType
+                (selectionType != "all" ? selectedOptions.length : "") +
+                " " +
+                selectionType
             }
           />
         ) : (
           <>
             {label}
-            <input required className=" w-1" />
+            <input required={required} className=" w-1" />
           </>
         )}
       </button>

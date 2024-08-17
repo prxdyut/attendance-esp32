@@ -47,9 +47,45 @@ const UserSchema = new Schema({
     unique: true,
     required: true,
   },
+  totalFees: {
+    type: Number,
+    required: true,
+    default: 0,
+  },
+  totalPaid: {
+    type: Number,
+    required: true,
+    default: 0,
+  },
 });
 
 const User = mongoose.model("User", UserSchema);
+
+const FeeInstallmentSchema = new Schema({
+  userId: {
+    type: Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
+  amount: {
+    type: Number,
+    required: true,
+  },
+  refNo: {
+    type: String,
+    required: true,
+  },
+  mode: {
+    type: String,
+    required: true,
+  },
+  date: {
+    type: Date,
+    required: true,
+  },
+});
+
+const FeeInstallment = mongoose.model("FeeInstallment", FeeInstallmentSchema);
 
 const TemplateSchema = new Schema({
   uname: {
@@ -134,4 +170,143 @@ const MessageSchema = new Schema({
 
 const Message = mongoose.model("Message", MessageSchema);
 
-export { Batch, User, Template, Holiday, Punch, Message, NewCard };
+const scheduleSchema = new mongoose.Schema({
+  date: { type: Date, required: true },
+  batchIds: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Batch",
+    required: true,
+  },
+  scheduledBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
+  subject: { type: String, required: true },
+  startTime: { type: String, required: true },
+  endTime: { type: String, required: true },
+});
+
+const Schedule = mongoose.model("Schedule", scheduleSchema);
+
+const ScoreSchema = new Schema({
+  date: {
+    type: Date,
+    required: true,
+  },
+  title: {
+    type: String,
+    required: true,
+  },
+  subject: {
+    type: String,
+    required: true,
+  },
+  obtained: [
+    {
+      studentId: {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+        required: true,
+      },
+      marks: {
+        type: Number,
+        required: true,
+      },
+    },
+  ],
+  total: {
+    type: Number,
+    required: true,
+  },
+  batchIds: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: "Batch",
+      required: true,
+    },
+  ],
+});
+
+const Score = mongoose.model("Score", ScoreSchema);
+
+const ResourceSchema = new Schema({
+  title: {
+    type: String,
+    required: true,
+  },
+  fileUrl: {
+    type: String,
+    required: true,
+  },
+  batchIds: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: "Batch",
+    },
+  ],
+  userIds: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+  ],
+  all: {
+    type: Boolean,
+    default: false,
+  },
+  uploadDate: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
+const Resource = mongoose.model("Resource", ResourceSchema);
+
+const AlertSchema = new Schema({
+  title: {
+    type: String,
+    required: true,
+  },
+  message: {
+    type: String,
+    required: true,
+  },
+  batchIds: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: "Batch",
+    },
+  ],
+  userIds: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+  ],
+  all: {
+    type: Boolean,
+    default: false,
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
+const Alert = mongoose.model("Alert", AlertSchema);
+
+export {
+  Alert,
+  Batch,
+  User,
+  Template,
+  Holiday,
+  Punch,
+  Message,
+  NewCard,
+  Schedule,
+  Score,
+  FeeInstallment,
+  Resource,
+};

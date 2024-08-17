@@ -5,29 +5,29 @@ export const handleSubmit = async (
   endpoint: string,
   setLoading: any,
   onSuccess: any,
-  onError: any
+  onError: any,
+  file?: File
 ) => {
   event?.preventDefault();
   setLoading(true);
 
   const formData = new FormData(event?.target as HTMLFormElement);
-  const body: any = {};
+
+  let body: any = {};
   formData.forEach((value, key) => {
     const data = formData.getAll(key);
     body[key] = data.length == 1 ? data[0] : data;
   });
 
-  const response = await fetch(
-    `/api` +
-      endpoint,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    }
-  ).then((res) => res.json());
+  console.log(body);
+
+  const response = await fetch(`/api` + endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  }).then((res) => res.json());
 
   setLoading(false);
   console.log(response);

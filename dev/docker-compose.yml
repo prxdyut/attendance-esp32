@@ -22,14 +22,30 @@ services:
     build:
       context: ../frontend
       dockerfile: Dockerfile.dev
+    volumes: 
+      - ../frontend:/app
     environment:
       - NODE_ENV=production
 
   mongo:
     image: mongo:latest
+    ports:
+      - "22222:27017"
     volumes:          
-      - ./mongodb/data:/data
+      - ./mongo/db:/data/db
     command: mongod --bind_ip_all
+
+  minio:
+    image: minio/minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - ./minio:/data
+    environment:
+      MINIO_ROOT_USER: pradyut
+      MINIO_ROOT_PASSWORD: pradyut2006
+    command: server --console-address ":9001" /data
 
   nginx:
     image: nginx:latest
@@ -40,6 +56,8 @@ services:
     depends_on:
       - frontend
       - backend
+      - minio
 
 volumes:
+  mongodb_data:
   node_modules:

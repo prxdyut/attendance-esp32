@@ -1,4 +1,4 @@
-import type { Server, Socket } from "socket.io";
+import type { Namespace, Server, Socket } from "socket.io";
 import { getBrowserContext } from "../whatsapp";
 
 function delay(ms: number) {
@@ -15,13 +15,18 @@ export async function whatsappSocket(socket: Socket) {
   let isConnected = true;
 
   while (isConnected) {
-    const base64Image = await getBrowserContext().page?.screenshot({
-      type: "png",
-      encoding: "base64",
-    });
+    let base64Image = "";
+    try {
+      base64Image = await getBrowserContext().page?.screenshot({
+        type: "png",
+        encoding: "base64",
+      }) as string;
+    } catch (error: any) {
+      console.log("Screenshot Error : ", error.message);
+    }
     socket.emit("image", base64Image);
 
-    await delay(100)
+    await delay(100);
   }
 
   socket.on("disconnect", () => {

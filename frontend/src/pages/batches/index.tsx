@@ -5,16 +5,17 @@ import { Search, Plus, Eye, Edit, Trash2 } from "lucide-react";
 
 export default function Batches() {
   const [loading, setLoading] = useState<boolean>(false);
-  const [batches, setBatches] = useState<any[]>([]);
+  const [data , setData] = useState<any>({});
   const [searchTerm, setSearchTerm] = useState<string>("");
+console.log(data)
 
   useEffect(() => {
-    handleFetch("/batches", setLoading, setBatches, console.log);
+    handleFetch("/batches", setLoading, setData, console.log);
   }, []);
 
-  const filteredBatches = batches.filter((batch) =>
+  const filteredBatches = data?.batches?.filter((batch: any) =>
     batch.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  ) || [];
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -60,7 +61,7 @@ export default function Batches() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredBatches.map((batch, index) => (
+                  {filteredBatches.map((batch: any, index: number) => (
                     <tr key={batch._id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{index + 1}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{batch.name}</td>

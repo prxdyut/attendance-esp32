@@ -11,9 +11,6 @@ RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key
     && apt-get update \
     && apt-get install -y google-chrome-stable \
     && rm -rf /var/lib/apt/lists/*
-
-RUN sudo apt-get install ffmpeg
-RUN ffmpeg -version
     
 # Set the working directory
 WORKDIR /app

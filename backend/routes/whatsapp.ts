@@ -24,6 +24,7 @@ export const userDataDir: string = path.join(
   "browser"
 );
 
+let isMessageProcessing = false;
 let context: { browser?: Browser; page?: Page } = {};
 
 export function getBrowserContext() {
@@ -102,12 +103,12 @@ class RequestQueue {
     if (!this.intervalId) {
       this.intervalId = setInterval(async () => {
         await this.performChecksAndTasks();
-      }, 1000) as NodeJS.Timeout;
+      }, 2000) as NodeJS.Timeout;
     }
   }
 
   private async performChecksAndTasks() {
-    if (this.isProcessing || this.isLowPriority) return;
+    if (this.isProcessing || this.isLowPriority || isMessageProcessing) return;
 
     this.isProcessing = true;
 
@@ -121,6 +122,7 @@ class RequestQueue {
       }
     } catch (error) {
       console.error("Error in performChecksAndTasks:", error);
+      await context.page?.reload({waitUntil: 'networkidle0'})
     } finally {
       this.isProcessing = false;
     }
@@ -153,6 +155,15 @@ class RequestQueue {
 }
 
 const requestQueue = new RequestQueue();
+const names = [
+  "Pradyut Das 444",
+  "Vidhi",
+  "Mayuresh Patil",
+  // "Shrish Classes",
+  "Palakkk",
+];
+const randomName = names[Math.floor(Math.random() * names.length)];
+const randomOpt = Math.random() >= 0.5;
 
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -170,7 +181,12 @@ async function initializeBrowser(): Promise<void> {
       ],
       executablePath: "/usr/bin/google-chrome-stable",
     });
+
     context.page = await context.browser?.newPage();
+    await context.page.emulateTimezone("Asia/Calcutta");
+    await context.page.setUserAgent(
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"
+    );
     await context.page?.setViewport({
       width: 1366,
       height: 768,
@@ -228,9 +244,24 @@ async function closeChat() {
     await context.page?.click('[role="application"] [aria-label="Close chat"]');
   } catch (error) {}
 }
+async function getAJoke() {
+  let joke;
 
+  try {
+    joke = await fetch("https://official-joke-api.appspot.com/jokes/random/");
+  } catch (error) {
+    joke = await fetch("https://official-joke-api.appspot.com/random_joke");
+  }
+  joke = await joke.json();
+
+  const message = joke
+    ? joke?.setup + " \n 🤔🤔🤔 \n" + joke?.punchline
+    : "sorry there was an error";
+  return message;
+}
 async function fetchUnreadMessages() {
   if (!context.page) return [];
+  if (!(await isLoggedIn())) return;
 
   await context.page?.waitForSelector("[aria-label='Chat list']", {
     timeout: 60000,
@@ -247,97 +278,83 @@ async function fetchUnreadMessages() {
   });
 
   if (unreads.length === 0) return [];
-  unreads = unreads.filter((_) => {
-    if (
-      _ == "Palakkk" ||
-      _ == "Pradyut Das 444" ||
-      _ == "Vidhi" ||
-      _ == "Ujwal" ||
-      _ == "Shrish Classes"
-    ) {
-      return true;
-    }
-    return false;
-  });
 
   await closeChat();
-  await Promise.all(
-    unreads.map(async (contact) => {
-      await controlNetworkConditions(false);
-      await context.page?.click(`span[title="${contact}"]`);
-      await context.page?.waitForNetworkIdle({ timeout: 10000 });
-      await controlNetworkConditions(true);
-      await context.page?.waitForSelector(".message-in", { timeout: 10000 });
-      const messages = await context.page?.evaluate(() => {
-        let messages: any[] = [];
-        document
-          .querySelectorAll('.message-in [class*="copyable-text"] > div')
-          .forEach((elem) => {
-            let text = "";
-            try {
-              ((
-                elem.querySelector("span[aria-label] span") as HTMLElement
-              )?.childNodes).forEach((_: ChildNode) => {
-                const n = _.nodeName;
-                if (n == "#text") {
-                  text += (_.textContent || "").trim();
-                }
-                if (n == "IMG") {
-                  const imgElement = _ as HTMLElement;
-                  text += imgElement.getAttribute("alt");
-                }
-              });
-            } catch (error) {
-              ((
-                elem.querySelector("span[class]") as HTMLElement
-              )?.childNodes).forEach((_: ChildNode) => {
-                const n = _.nodeName;
-                if (n == "#text") {
-                  text += (_.textContent || "").trim();
-                }
-                if (n == "IMG") {
-                  const imgElement = _ as HTMLElement;
-                  text += imgElement.getAttribute("alt");
-                }
-              });
-            }
-            const time =
-              ((
-                (
-                  (elem as HTMLElement).parentElement
-                    ?.parentElement as HTMLElement
-                ).querySelector(
-                  "div:nth-of-type(2) > div > span"
-                ) as HTMLElement
-              )?.innerText as string) || "-";
-            messages.push({ text, time });
-          });
-        return messages;
-      });
-      try {
-        const newMessages = getMessagesAfterAMessage(
-          store[contact as string],
-          messages
-        );
-        console.log(newMessages);
-        await context.page?.waitForSelector(
-          '#main div[contenteditable="true"][data-tab="10"]'
-        );
+  for (const contact of unreads) {
+    await controlNetworkConditions(false);
+    await context.page?.click(`span[title="${contact}"]`);
+    await context.page?.waitForNetworkIdle({ timeout: 10000 });
+    await controlNetworkConditions(true);
+    await context.page?.waitForSelector(".message-in", { timeout: 10000 });
+    const messages = await context.page?.evaluate(() => {
+      let messages: any[] = [];
+      document
+        .querySelectorAll('.message-in [class*="copyable-text"] > div')
+        .forEach((elem) => {
+          let text = "";
+          try {
+            ((
+              elem.querySelector("span[aria-label] span") as HTMLElement
+            )?.childNodes).forEach((_: ChildNode) => {
+              const n = _.nodeName;
+              if (n == "#text") {
+                text += (_.textContent || "").trim();
+              }
+              if (n == "IMG") {
+                const imgElement = _ as HTMLElement;
+                text += imgElement.getAttribute("alt");
+              }
+            });
+          } catch (error) {
+            ((
+              elem.querySelector("span[class]") as HTMLElement
+            )?.childNodes).forEach((_: ChildNode) => {
+              const n = _.nodeName;
+              if (n == "#text") {
+                text += (_.textContent || "").trim();
+              }
+              if (n == "IMG") {
+                const imgElement = _ as HTMLElement;
+                text += imgElement.getAttribute("alt");
+              }
+            });
+          }
+          const time =
+            ((
+              (
+                (elem as HTMLElement).parentElement
+                  ?.parentElement as HTMLElement
+              ).querySelector("div:nth-of-type(2) > div > span") as HTMLElement
+            )?.innerText as string) || "-";
+          messages.push({ text, time });
+        });
+      return messages;
+    });
+    try {
+      const newMessages = getMessagesAfterAMessage(
+        store[contact as string],
+        messages
+      );
+      console.log(newMessages);
+      const message = await getAJoke();
 
-        await context.page?.type(
-          '#main div[contenteditable="true"][data-tab="10"]',
-          "lysm 🥰"
-        );
-        await context.page?.keyboard.press("Enter");
-        updateStore(
-          contact as string,
-          messages?.[messages?.length - 1] ?? messages?.[0]
-        );
-      } catch (error) {}
-    })
-  );
-  await closeChat();
+      await context.page?.waitForSelector(
+        '#main div[contenteditable="true"][data-tab="10"]'
+      );
+
+      await context.page?.type(
+        '#main div[contenteditable="true"][data-tab="10"]',
+        message
+      );
+      await context.page?.keyboard.press("Enter");
+      updateStore(
+        contact as string,
+        messages?.[messages?.length - 1] ?? messages?.[0]
+      );
+    } catch (error) {}
+  }
   controlNetworkConditions(false);
+  await closeChat();
 }
 
 async function init() {
@@ -354,8 +371,6 @@ async function init() {
     }
   }
 }
-
-init();
 
 function getCurrentDateTime(): string {
   return new Date().toLocaleString();
@@ -452,7 +467,7 @@ async function openContact(contactName: string): Promise<void> {
     await resetSearch();
     await context.page?.waitForSelector(
       '#side div[contenteditable="true"][data-tab="3"]',
-      { timeout: 1000 }
+      { timeout: 5000 }
     );
     await context.page?.type(
       '#side div[contenteditable="true"][data-tab="3"]',
@@ -602,7 +617,9 @@ async function sendMessage(message: string): Promise<void> {
   try {
     if (!context.page) throw new Error("Page not initialized");
     await context.page?.waitForSelector('[aria-placeholder="Type a message"]');
-    await context.page?.type('[aria-placeholder="Type a message"]', message);
+    await context.page?.type('[aria-placeholder="Type a message"]', message, {
+      delay: 5,
+    });
     await context.page?.keyboard.press("Enter");
     await context.page?.waitForNetworkIdle({ timeout: 2000 });
   } catch (error) {
@@ -1139,5 +1156,58 @@ process.on("SIGINT", async () => {
   }
   process.exit();
 });
+const file = Bun.file("whatsapp-error-logs.txt");
+const writer = file.writer();
+
+async function saveLog(logMessage: string) {
+  writer.write(logMessage + "\n");
+  writer.flush();
+}
+// setInterval(async () => {
+//   if (isMessageProcessing) return;
+//   if (Math.random() >= 0.5) {
+//     try {
+//       isMessageProcessing = true;
+//       await requestQueue.pause();
+//       const start = performance.now();
+//       if (await isLoggedIn()) {
+//         let contactName = names[Math.floor(Math.random() * names.length)];
+//         let message = await getAJoke();
+//         try {
+//           await sendWhatsappMessage({ contactName, message });
+//           console.log("Message Sent");
+//         } catch (error: any) {
+//           console.log("messaging error: ", error);
+//           const screenshot = "/" + Date.now() + ".png";
+//           const screenshotPath = "./public/whatsapp/errors/" + screenshot;
+//           await context.page?.screenshot({ path: screenshotPath });
+//           saveLog(
+//             "timestamp: " +
+//               new Date().toLocaleString() +
+//               "\nerror: " +
+//               error.message +
+//               "\nscreenshot: " +
+//               screenshot +
+//               "\ncontact: " +
+//               contactName +
+//               "\nmessage: " +
+//               message +
+//               "\n-"
+//           );
+//           await context.page?.reload({ waitUntil: "networkidle0" });
+//         }
+//       }
+
+//       const end = performance.now();
+//       console.log("Took ", ((end - start) / 1000).toFixed(1), "ms");
+//     } catch (error) {
+//     } finally {
+//       await requestQueue.resume();
+//       isMessageProcessing = false;
+//     }
+//   }
+// }, 2000);
+
+init();
 
 export default router;
