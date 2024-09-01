@@ -19,6 +19,10 @@ const BatchSchema = new Schema({
     type: String,
     required: true,
   },
+  deleted: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const Batch = mongoose.model("Batch", BatchSchema);
@@ -45,7 +49,7 @@ const UserSchema = new Schema({
   cardUid: {
     type: String,
     unique: true,
-    required: true,
+    required: false,
   },
   totalFees: {
     type: Number,
@@ -56,6 +60,10 @@ const UserSchema = new Schema({
     type: Number,
     required: true,
     default: 0,
+  },
+  deleted: {
+    type: Boolean,
+    default: false,
   },
 });
 
@@ -133,6 +141,10 @@ const HolidaySchema = new Schema({
     type: Date,
     required: true,
   },
+  deleted: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const Holiday = mongoose.model("Holiday", HolidaySchema);
@@ -170,22 +182,21 @@ const MessageSchema = new Schema({
 
 const Message = mongoose.model("Message", MessageSchema);
 
-const scheduleSchema = new mongoose.Schema({
-  date: { type: Date, required: true },
-  batchIds: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Batch",
-    required: true,
+const scheduleSchema = new mongoose.Schema(
+  {
+    date: { type: Date, required: true },
+    batchIds: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Batch",
+      required: true,
+    },
+    deleted: { type: String, default: false },
+    subject: { type: String, required: true },
+    startTime: { type: String, required: true },
+    endTime: { type: String, required: true },
   },
-  scheduledBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
-    required: true,
-  },
-  subject: { type: String, required: true },
-  startTime: { type: String, required: true },
-  endTime: { type: String, required: true },
-});
+  { timestamps: true }
+);
 
 const Schedule = mongoose.model("Schedule", scheduleSchema);
 
@@ -239,6 +250,10 @@ const ResourceSchema = new Schema({
     type: String,
     required: true,
   },
+  fileType: {
+    type: String,
+    required: true,
+  },
   batchIds: [
     {
       type: Schema.Types.ObjectId,
@@ -255,9 +270,17 @@ const ResourceSchema = new Schema({
     type: Boolean,
     default: false,
   },
-  uploadDate: {
+  date: {
+    type: Date,
+    required: true,
+  },
+  createdAt: {
     type: Date,
     default: Date.now,
+  },
+  deleted: {
+    type: Boolean,
+    default: false,
   },
 });
 
@@ -287,6 +310,10 @@ const AlertSchema = new Schema({
   all: {
     type: Boolean,
     default: false,
+  },
+  date: {
+    type: Date,
+    required: true,
   },
   createdAt: {
     type: Date,

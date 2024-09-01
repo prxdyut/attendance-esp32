@@ -1,6 +1,10 @@
 import express from "express";
-import { NewCard, Punch, User } from "../mongodb/models";
+import { NewCard, Punch, Score, User } from "../mongodb/models";
 import { addDays } from "date-fns";
+
+import { Types } from "mongoose";
+import { endOfDay, startOfDay } from "date-fns";
+const { ObjectId } = Types;
 
 const router = express.Router();
 
@@ -16,7 +20,7 @@ router.post("/", async (req, res) => {
     res.status(201).json({
       success: true,
       data: user,
-      message: "User created successfully"
+      message: "User created successfully",
     });
   } catch (error: any) {
     res.status(400).json({ success: false, message: error.message });
@@ -26,15 +30,10 @@ router.post("/", async (req, res) => {
 router.get("/", async (req, res) => {
   const { role } = req.query;
   try {
-    let users = [];
-    switch (role) {
-      case "all":
-        users = await User.find({ role: ["student", "faculty"] });
-        break;
-      default:
-        users = await User.find({ role });
-        break;
-    }
+    let query: any = { deleted: false };
+    if (role) query.role = [role];
+    else query.role = ["student", "faculty"];
+    const users = await User.find(query).populate("batchIds");
 
     res.json({ success: true, data: { users } });
   } catch (error: any) {
@@ -42,36 +41,60 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.get('/data', async (req, res) => {
+router.get("/data", async (req, res) => {
   const { userId, startDate, endDate } = req.query;
 
   try {
-    const user = await User.findOne({ _id: userId });
+    const user = await User.findOne({ _id: userId }).populate("batchIds");
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: "User not found" });
     }
 
     const punches = await Punch.find({
       userId: user._id,
       timestamp: {
         $gte: new Date(startDate as string),
-        $lte: addDays(endDate as string, 1)
-      }
-    }).sort({timestamp :1})
+        $lte: addDays(endDate as string, 1),
+      },
+    }).sort({ timestamp: 1 });
+
+    // Find all scores where the student's ID is in the obtained array
+    const scores = await Score.find({
+      "obtained.studentId": new ObjectId(user._id),
+    }).populate("batchIds");
+
+    // Process the scores to mark absences and format the response
+    const processedScores = scores.map((score) => {
+      const studentScore = score.obtained.find(
+        (item) => item.studentId.toString() === user._id.toString()
+      );
+
+      return {
+        _id: score._id,
+        subject: score.subject,
+        date: score.date,
+        total: score.total,
+        title: score.title,
+        batchIds: score.batchIds,
+        marks: studentScore?.marks === -1 ? "Absent" : studentScore?.marks,
+        percentage:
+          studentScore?.marks === -1
+            ? "N/A"
+            : ((studentScore?.marks / score.total) * 100).toFixed(2) + "%",
+      };
+    });
 
     res.json({
-      success: true, data: {
-        userData: {
-          name: user.name,
-          role: user.role,
-          phone: user.phone
-        },
-        punches: punches
-      }
+      success: true,
+      data: {
+        userData: user,
+        punches: punches,
+        scores: processedScores,
+      },
     });
   } catch (error) {
-    console.error('Error fetching user data:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error("Error fetching user data:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -79,7 +102,7 @@ router.get('/data', async (req, res) => {
 // Get a single user
 router.get("/:id", async (req, res) => {
   try {
-    const user = await User.findById(req.params.id);
+    const user = await User.findOne({ _id: req.params.id, deleted: false });
     if (!user)
       return res
         .status(404)
@@ -108,9 +131,40 @@ router.post("/:id/edit", async (req, res) => {
   }
 });
 
+// Update a user
+router.post("/:userId/:batchId/remove", async (req, res) => {
+  console.log(req.body);
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.params.userId,
+      {
+        $pull: {
+          batchIds: req.params.batchId,
+        },
+      },
+      {
+        new: true,
+      }
+    );
+    if (!user)
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    res.json({ success: true, data: user });
+  } catch (error: any) {
+    console.log(error);
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
 router.post("/:id/delete", async (req, res) => {
   try {
-    const user = await User.findByIdAndDelete(req.params.id);
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { cardUid: undefined, deleted: true },
+      { new: true }
+    );
+
     if (!user)
       return res
         .status(404)

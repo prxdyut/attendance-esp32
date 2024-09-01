@@ -1,93 +1,184 @@
 import React, { useEffect, useState } from "react";
 import { Link, Outlet } from "react-router-dom";
 import { handleFetch } from "../../utils/handleFetch";
-import { Search, Plus, Eye, Edit, Trash2 } from "lucide-react";
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  CircularProgress,
+  FormControl,
+  IconButton,
+  InputAdornment,
+  OutlinedInput,
+  Paper,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Typography,
+} from "@mui/material";
+import { Search, Add, Visibility, Edit, Delete } from "@mui/icons-material";
+import { grey } from "@mui/material/colors";
+import ModalButton from "../../components/ModalForm";
+import DynamicForm from "../../components/DynamicForm";
+
+interface Batch {
+  _id: string;
+  name: string;
+}
 
 export default function Batches() {
   const [loading, setLoading] = useState<boolean>(false);
-  const [data , setData] = useState<any>({});
+  const [data, setData] = useState<{ batches: Batch[] }>({ batches: [] });
   const [searchTerm, setSearchTerm] = useState<string>("");
-console.log(data)
-
-  useEffect(() => {
+  const fetchBatches = () => {
     handleFetch("/batches", setLoading, setData, console.log);
+  };
+  useEffect(() => {
+    fetchBatches();
   }, []);
 
-  const filteredBatches = data?.batches?.filter((batch: any) =>
+  const filteredBatches = data.batches.filter((batch) =>
     batch.name.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
-
+  );
+  console.log(data);
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-8">Batches</h1>
-        
-        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-          <div className="flex flex-col md:flex-row md:items-center mb-4 md:mb-0">
-            <div className="relative flex-grow mb-4 md:mb-0 md:mr-4">
-              <input
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Search batches..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-              <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
-            </div>
-            <Link
-              to="/batches/new"
-              className="inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300"
-            >
-              <Plus size={20} className="mr-2" />
-              Create Batch
-            </Link>
-          </div>
-        </div>
-        
-        {loading ? (
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading batches...</p>
-          </div>
-        ) : (
-          <div className="bg-white shadow-md rounded-lg overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Id</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredBatches.map((batch: any, index: number) => (
-                    <tr key={batch._id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{index + 1}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{batch.name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">61</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex space-x-2">
-                          <Link to={`/batches/${batch._id}`} className="text-blue-600 hover:text-blue-900">
-                            <Eye size={18} />
-                          </Link>
-                          <Link to={`/batches/${batch._id}/edit`} className="text-yellow-600 hover:text-yellow-900">
-                            <Edit size={18} />
-                          </Link>
-                          <Link to={`/batches/${batch._id}/delete`} className="text-red-600 hover:text-red-900">
-                            <Trash2 size={18} />
-                          </Link>
-                        </div>
-                      </td>
-                    </tr>
+    <Stack
+      sx={{ overflow: "hidden", height: "100%", flexFlow: "column" }}
+      gap={2}
+    >
+      <Box display={"flex"} justifyContent="space-between" alignItems="center">
+        <Typography variant="h5" fontWeight={600}>
+          Batches
+        </Typography>
+        <ModalButton
+          modal={
+            <DynamicForm
+              fields={[
+                { type: "text", name: "name", label: "Batch Name" },
+                {
+                  type: "targetSelector",
+                  label: "Select Students",
+                  selectOnly: "userIds",
+                  name: "target",
+                  noPrompt: true,
+                },
+              ]}
+            />
+          }
+          path={`/new`}
+          url={`/batches`}
+          title="New Batch"
+          button="Create"
+          onSuccess={fetchBatches}
+          success="Created new Batch successfully!"
+        >
+          <Button variant="contained" size="small">
+            <Add /> New Batch
+          </Button>
+        </ModalButton>
+      </Box>
+      <Card elevation={0} sx={{ borderRadius: 5, bgcolor: grey[100] }}>
+        <CardContent sx={{ display: "flex", flexFlow: "column", gap: 3 }}>
+          <FormControl fullWidth>
+            <OutlinedInput
+              placeholder="Search batches..."
+              sx={{ borderRadius: 2.5, bgcolor: "white" }}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              startAdornment={
+                <InputAdornment position="start">
+                  <Search />
+                </InputAdornment>
+              }
+            />
+          </FormControl>
+          <Box>
+            {loading ? (
+              <Box
+                display="flex"
+                justifyContent="center"
+                alignItems="center"
+                py={8}
+              >
+                <CircularProgress />
+              </Box>
+            ) : (
+              <TableContainer
+                elevation={0}
+                component={Paper}
+                sx={{ borderRadius: 2 }}
+              >
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Id</TableCell>
+                      <TableCell>Name</TableCell>
+                      <TableCell>Total</TableCell>
+                      <TableCell>Students</TableCell>
+                      <TableCell>Teachers</TableCell>
+                      <TableCell>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredBatches.map((batch: any, index) => (
+                      <TableRow key={batch._id} hover>
+                        <TableCell>{index + 1}</TableCell>
+                        <TableCell>{batch.name}</TableCell>
+                        <TableCell>
+                          {batch.students.length + batch.faculty.length}
+                        </TableCell>
+                        <TableCell>{batch.students.length}</TableCell>
+                        <TableCell>{batch.faculty.length}</TableCell>
+                        <TableCell>
+                          <Stack direction="row" spacing={1}>
+                            <IconButton
+                              component={Link}
+                              to={`/batches/${batch._id}`}
+                              size="small"
+                            >
+                              <Visibility fontSize="small" />
+                            </IconButton>
+                            <IconButton
+                              component={Link}
+                              to={`./${batch._id}/edit/users`}
+                            >
+                              <Edit />
+                            </IconButton>
+
+                            <ModalButton
+                              modal={
+                                <Typography>
+                                  Are you sure you want to delete this Batch?
+                                </Typography>
+                              }
+                              path={`/${batch._id}/delete`}
+                              url={`/batches/${batch._id}/delete`}
+                              title="Delete Batch"
+                              button="Delete"
+                              onSuccess={fetchBatches}
+                              success="Deleted the Batch Successfully!"
+                            >
+                              <IconButton>
+                                <Delete />
+                              </IconButton>
+                            </ModalButton>
+                          </Stack>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </div>
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </Box>
+        </CardContent>
+      </Card>
       <Outlet />
-    </div>
+    </Stack>
   );
 }

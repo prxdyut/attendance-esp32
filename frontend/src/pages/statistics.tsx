@@ -1,45 +1,66 @@
-import React, { useState, useEffect } from "react";
-import { Link, Outlet } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { TargetSelector } from "../components/SelectTarget";
 import { handleFetch } from "../utils/handleFetch";
-import { addDays, subDays } from "date-fns";
+import { endOfDay, startOfDay, subDays } from "date-fns";
+import { Box, Card, Divider, Stack, Typography } from "@mui/material";
+import { DatePicker, LocalizationProvider } from "@mui/x-date-pickers";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFnsV3";
+import { grey } from "@mui/material/colors";
+import Grid2 from "@mui/material/Unstable_Grid2/Grid2";
+import { getSubject } from "../utils/subjectsActions";
 
 export default function Statistics() {
-  const [startDate, setStartDate] = useState(
-    subDays(new Date(), 1).toISOString().split("T")[0]
-  );
-  const [endDate, setEndDate] = useState(
-    new Date().toISOString().split("T")[0]
-  );
-  const [stats, setStats] = useState(null);
+  const [fees, setFees] = useState<any>(null);
+  const [stats, setStats] = useState<any>(null);
+  const [scores, setScores] = useState<any>(null);
   const [selectionType, setSelectionType] = useState("all");
-  const [selectedIds, setSelectedIds] = useState([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [dateRange, setDateRange] = useState<[Date, Date]>([
+    startOfDay(new Date()),
+    endOfDay(new Date()),
+  ]);
 
   useEffect(() => {
-    if (startDate && endDate && selectionType) {
+    if (selectionType) {
       fetchStatistics();
     }
-  }, [startDate, endDate, selectionType, selectedIds]);
+  }, [...dateRange, selectionType, selectedIds]);
 
   const fetchStatistics = async () => {
     setError("");
     handleFetch(
       `/statistics?selectionType=${
         selectionType && selectedIds.length ? selectionType : "all"
-      }&selectedIds=${selectedIds.join(
-        ","
-      )}&startDate=${startDate}&endDate=${endDate}`,
+      }&selectedIds=${selectedIds.join(",")}&startDate=${
+        dateRange[0]
+      }&endDate=${dateRange[1]}`,
       setLoading,
-      (data) => {
-        setStats(data.stats);
-      },
-      (errorMessage) => setError(errorMessage)
+      (data: any) => setStats(data.stats),
+      (errorMessage: any) => setError(errorMessage)
+    );
+    handleFetch(
+      `/scores/statistics?selectionType=${
+        selectionType && selectedIds.length ? selectionType : "all"
+      }&selectedIds=${selectedIds.join(",")}&startDate=${
+        dateRange[0]
+      }&endDate=${dateRange[1]}`,
+      setLoading,
+      setScores,
+      (errorMessage: any) => setError(errorMessage)
+    );
+    handleFetch(
+      `/fees/statistics?selectionType=${
+        selectionType && selectedIds.length ? selectionType : "all"
+      }&selectedIds=${selectedIds.join(",")}`,
+      setLoading,
+      setFees,
+      console.error
     );
   };
-  console.log(stats);
-  const handleSelectionChange = (type, ids) => {
+
+  const handleSelectionChange = (type: string, ids: string[]) => {
     setSelectionType(type);
     setSelectedIds(ids);
   };
@@ -53,64 +74,69 @@ export default function Statistics() {
     value?: string;
     link?: string;
   }) => (
-    <div className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow">
-      <h3 className="text-sm font-medium text-gray-500 mb-2">{title}</h3>
-      <p className="text-2xl font-bold">{value}</p>
-      {link && (
-        <Link to={link} className="text-xs text-blue-500 mt-1 hover:underline">
-          View details
-        </Link>
-      )}
-    </div>
+    <Card
+      elevation={0}
+      sx={{
+        textAlign: "center",
+        bgcolor: grey[100],
+        py: 3,
+        borderRadius: 5,
+        flex: 1,
+      }}
+    >
+      <Typography fontWeight={500}>{title}</Typography>
+      <Typography fontWeight={700} variant="h5">{`${value}`}</Typography>
+    </Card>
   );
-
+  
   return (
-    <div className="container mx-auto p-4 space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
-        <h1 className="text-2xl font-semibold">Statistics</h1>
-        <div className="flex flex-wrap items-center gap-2">
+    <Stack sx={{ height: "100%", flexFlow: "column" }} gap={2}>
+      <Box display={"flex"}>
+        <Typography variant="h5" fontWeight={600}>
+          Statistics
+        </Typography>
+        <Box flex={1} />
+        <Stack direction={"row"} gap={1}>
           <TargetSelector onSelectionChange={handleSelectionChange} />
-          <div className="flex items-center space-x-2">
-            <input
-              type="date"
-              className="border rounded p-1"
-              value={startDate}
-              max={endDate}
-              onChange={(e) => setStartDate(e.target.value)}
+        </Stack>
+      </Box>
+      <Divider />
+      <Box display={"flex"}>
+        <Typography variant="h6" fontWeight={600}>
+          Attendance
+        </Typography>
+        <Box flex={1} />
+        <Stack direction={"row"} gap={1}>
+          <LocalizationProvider dateAdapter={AdapterDateFns}>
+            <DatePicker
+              format="dd/MM/yy"
+              label="Start Date"
+              sx={{
+                width: 150,
+                "& .MuiOutlinedInput-notchedOutline": { borderRadius: 2.5 },
+              }}
+              value={dateRange[0] as Date}
+              onChange={(newValue: Date | null) => {
+                setDateRange((data: Date[]) => [newValue as Date, data[1]]);
+              }}
             />
-            <span>-</span>
-            <input
-              type="date"
-              className="border rounded p-1"
-              value={endDate}
-              min={startDate}
-              onChange={(e) => setEndDate(e.target.value)}
+            <DatePicker
+              format="dd/MM/yy"
+              label="End Date"
+              sx={{
+                width: 150,
+                "& .MuiOutlinedInput-notchedOutline": { borderRadius: 2.5 },
+              }}
+              value={dateRange[1] as Date}
+              onChange={(newValue: Date | null) => {
+                setDateRange((data: Date[]) => [data[0], newValue as Date]);
+              }}
             />
-          </div>
-        </div>
-      </div>
-
-      {error && (
-        <div
-          className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4"
-          role="alert"
-        >
-          <strong className="font-bold">Error!</strong>
-          <span className="block sm:inline"> {error}</span>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {loading ? (
-          Array(5)
-            .fill(0)
-            .map((_, i) => (
-              <div key={i} className="bg-white rounded-lg shadow p-4">
-                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div className="h-8 bg-gray-200 rounded w-1/2"></div>
-              </div>
-            ))
-        ) : stats ? (
+          </LocalizationProvider>
+        </Stack>
+      </Box>
+      <Stack gap={2} direction={"row"}>
+        {stats ? (
           <>
             <StatCard title="Present" value={stats.present} link="./present" />
             <StatCard title="Absent" value={stats.absent} />
@@ -118,8 +144,8 @@ export default function Statistics() {
             <StatCard title="Early Exits" value="Coming soon" />
           </>
         ) : null}
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      </Stack>
+      <Stack gap={2} direction={"row"}>
         <StatCard
           title="Total Holidays"
           value={stats?.holidayStudents || "N/A"}
@@ -141,25 +167,78 @@ export default function Statistics() {
           value="Coming soon"
           link="./unexcused"
         />
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Link
-          to="./batch-based"
-          className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow"
-        >
-          <div className="flex items-center justify-center h-24">
-            <span className="text-lg font-semibold">Batch Based</span>
-          </div>
-        </Link>
-        <div className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-center h-24">
-            <span className="text-lg font-semibold">Busy Hours</span>
-          </div>
-        </div>
-      </div>
-
-      <Outlet />
-    </div>
+      </Stack>
+      <Divider />
+      <Box display={"flex"}>
+        <Typography variant="h6" fontWeight={600}>
+          Fees
+        </Typography>
+        <Box flex={1} />
+      </Box>
+      <Stack gap={2} direction={"row"}>
+        <StatCard title="Total Fees" value={fees?.totalFees} />
+        <StatCard title="Total Paid" value={fees?.paidFees} />
+        <StatCard title="Remaining Fees" value={fees?.remainingFees} />
+      </Stack>
+      <Divider />
+      <Box display={"flex"}>
+        <Typography variant="h6" fontWeight={600}>
+          Scores
+        </Typography>
+        <Box flex={1} />
+        <Stack direction={"row"} gap={1}>
+          <LocalizationProvider dateAdapter={AdapterDateFns}>
+            <DatePicker
+              format="dd/MM/yy"
+              label="Start Date"
+              sx={{
+                width: 150,
+                "& .MuiOutlinedInput-notchedOutline": { borderRadius: 2.5 },
+              }}
+              value={dateRange[0] as Date}
+              onChange={(newValue: Date | null) => {
+                setDateRange((data: Date[]) => [newValue as Date, data[1]]);
+              }}
+            />
+            <DatePicker
+              format="dd/MM/yy"
+              label="End Date"
+              sx={{
+                width: 150,
+                "& .MuiOutlinedInput-notchedOutline": { borderRadius: 2.5 },
+              }}
+              value={dateRange[1] as Date}
+              onChange={(newValue: Date | null) => {
+                setDateRange((data: Date[]) => [data[0], newValue as Date]);
+              }}
+            />
+          </LocalizationProvider>
+        </Stack>
+      </Box>
+      <Stack gap={2} direction={"row"}>
+        <StatCard title="Total" value={scores?.totalExams} />
+        <StatCard title="Average" value={scores?.averagePerformance + "%"} />
+        <StatCard title="Unattended" value={scores?.averageAttendance + "%"} />
+      </Stack>
+      <Grid2 container spacing={2}>
+        {scores?.subjectWiseScores?.map((score: any) => (
+          <Grid2 xs={6}>
+            <Box
+              display={"flex"}
+              sx={{ bgcolor: grey[100], px: 2, py: 1, borderRadius: 2.5 }}
+            >
+              <Typography fontWeight={500}>
+                {getSubject(score.subject)}{" "}
+                {`(AB ${score.totalAttempts - score.examsTaken})`}
+              </Typography>
+              <Box flex={1} />
+              <Typography fontWeight={700}>
+                {score.averageScore.toFixed(2)}
+              </Typography>
+            </Box>
+          </Grid2>
+        ))}
+      </Grid2>
+    </Stack>
   );
 }

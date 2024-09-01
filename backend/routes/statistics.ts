@@ -1,14 +1,7 @@
 import express from "express";
 import { Punch, User, Batch, Holiday } from "../mongodb/models";
-import {
-  addDays,
-  endOfDay,
-  format,
-  parseISO,
-  startOfDay,
-  subDays,
-} from "date-fns";
-import mongoose, { type ObjectId } from "mongoose";
+import { endOfDay, format, parse, parseISO, startOfDay } from "date-fns";
+import { type ObjectId } from "mongoose";
 import { eachDayOfInterval, isSameDay } from "date-fns";
 
 const router = express.Router();
@@ -20,13 +13,20 @@ router.get("/", async (req, res) => {
 
     const end = endOfDay(endDate as string).toISOString();
 
-    const { userIds, batchIds, punches, holidays, users, holidayFor, absentUsersByDate } =
-      await fetchData(
-        selectionType as string,
-        selectedIds as string,
-        start as string,
-        end as string
-      );
+    const {
+      userIds,
+      batchIds,
+      punches,
+      holidays,
+      users,
+      holidayFor,
+      absentUsersByDate,
+    } = await fetchData(
+      selectionType as string,
+      selectedIds as string,
+      start as string,
+      end as string
+    );
 
     const stats = await calculateStatistics(
       punches,
@@ -40,11 +40,14 @@ router.get("/", async (req, res) => {
     const holidayStudents = Object.values(
       Object.fromEntries(holidayFor)
     ).flatMap((_) => _).length;
-    const absent = Object.values(
-      Object.fromEntries(absentUsersByDate)
-    ).flatMap((_) => _).length;
+    const absent = Object.values(Object.fromEntries(absentUsersByDate)).flatMap(
+      (_) => _
+    ).length;
 
-    res.json({ success: true, data: { stats: { ...stats, holidayStudents , absent} } });
+    res.json({
+      success: true,
+      data: { stats: { ...stats, holidayStudents, absent } },
+    });
   } catch (error: any) {
     res
       .status(500)
@@ -130,7 +133,10 @@ router.get("/holidayFor", async (req, res) => {
 
     const holidayFor_ = Object.keys(Object.fromEntries(holidayFor)).flatMap(
       (key) => [
-        ...Object.fromEntries(holidayFor)[key].map((obj) => ({ ...obj._doc, date: key })),
+        ...Object.fromEntries(holidayFor)[key].map((obj) => ({
+          ...obj._doc,
+          date: parse(key, "dd-MM-yyyy", new Date()),
+        })),
       ]
     );
 
@@ -148,15 +154,12 @@ router.get("/holidayFor", async (req, res) => {
 export async function fetchData(
   selectionType: string,
   selectedIds: string,
-  startDate: string,
-  endDate: string
+  startDate?: string,
+  endDate?: string
 ) {
   let userIds: string[] = [];
   let batchIds: string[] = [];
   let users: any[] = [];
-  const start = startOfDay(parseISO(startDate as string));
-  const end = endOfDay(parseISO(endDate as string));
-  console.log(start, end);
 
   if (selectionType === "all") {
     users = await User.find();
@@ -176,6 +179,15 @@ export async function fetchData(
     userIds = users.map((user) => user._id.toString());
   }
 
+  if (!startDate && !endDate)
+    return {
+      userIds,
+      batchIds,
+      users,
+    };
+
+  const start = startOfDay(parseISO(startDate as string));
+  const end = endOfDay(parseISO(endDate as string));
   const query: any = {
     userId: userIds,
     timestamp: {
@@ -191,6 +203,7 @@ export async function fetchData(
       $gte: new Date(startDate),
       $lte: new Date(endDate),
     },
+    deleted: false,
   });
 
   const absentUsersByDate = new Map();
@@ -331,97 +344,5 @@ async function calculateStatistics(
     holidayStudents: totalHolidayStudents,
   };
 }
-
-router.get("/absentees", async (req, res) => {
-  try {
-    const { startDate, endDate, selectionType, selectedIds } = req.query;
-    const start = startOfDay(parseISO(startDate as string));
-    const end = endOfDay(parseISO(endDate as string));
-
-    const { userIds, batchIds, punches, holidays, users } = await fetchData(
-      selectionType as string,
-      selectedIds as string,
-      start.toISOString(),
-      end.toISOString()
-    );
-
-    const absentees = [];
-    const dateRange = eachDayOfInterval({ start, end });
-
-    for (const date of dateRange) {
-      const dateString = format(date, "yyyy-MM-dd");
-      const punchesForDay = punches.filter((punch) =>
-        isSameDay(new Date(punch.timestamp), date)
-      );
-      const presentUserIds = new Set(
-        punchesForDay.map((punch) => punch.userId.toString())
-      );
-
-      const holidaysForDay = holidays.filter((holiday) =>
-        isSameDay(new Date(holiday.date), date)
-      );
-
-      users.forEach((user) => {
-        const userId = user._id.toString();
-        const isPresent = presentUserIds.has(userId);
-        const isOnHoliday = holidaysForDay.some(
-          (holiday) =>
-            holiday.all ||
-            holiday.userIds.includes(userId) ||
-            holiday.batchIds.some((batchId) => user.batchIds.includes(batchId))
-        );
-
-        if (!isPresent && !isOnHoliday) {
-          absentees.push({
-            name: user.name,
-            date: dateString,
-          });
-        }
-      });
-    }
-
-    res.json({ success: true, data: { absentees } });
-  } catch (error: any) {
-    res
-      .status(500)
-      .json({ message: "Error fetching absentees", error: error.message });
-  }
-});
-
-router.get("/presentees", async (req, res) => {
-  try {
-    const { startDate, endDate, selectionType, selectedIds } = req.query;
-    const start = startOfDay(parseISO(startDate as string));
-    const end = endOfDay(parseISO(endDate as string));
-
-    const { userIds } = await fetchData(
-      selectionType as string,
-      selectedIds as string,
-      startDate as string,
-      endDate as string
-    );
-
-    const query: any = {
-      userId: { $in: userIds },
-      timestamp: {
-        $gte: start,
-        $lte: end,
-      },
-    };
-
-    const punches = await Punch.find(query).populate("userId", "name");
-    const presentees = punches.map((punch) => ({
-      name: punch.userId.name,
-      date: format(punch.timestamp, "yyyy-MM-dd"),
-      punchTime: punch.timestamp,
-    }));
-    console.log(presentees);
-    res.json({ success: true, data: { presentees } });
-  } catch (error: any) {
-    res
-      .status(500)
-      .json({ message: "Error fetching presentees", error: error.message });
-  }
-});
 
 export default router;

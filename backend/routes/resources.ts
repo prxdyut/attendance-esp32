@@ -8,14 +8,14 @@ const router = express.Router();
 
 // Upload a new resource
 router.post("/", async (req, res) => {
-  console.log(req.body)
+  console.log(req.body);
   try {
-    const resource = new Resource(req.body);
+    const resource = new Resource({ ...req.body, all: Boolean(req.body.all) });
     await resource.save();
 
     res.json({ success: true, data: resource });
   } catch (error: any) {
-    console.log(error)
+    console.log(error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -23,7 +23,9 @@ router.post("/", async (req, res) => {
 // Get all resources
 router.get("/", async (req, res) => {
   try {
-    const resources = await Resource.find();
+    const resources = await Resource.find({deleted: false})
+      .populate("batchIds")
+      .populate("userIds");
     res.json({ success: true, data: resources });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
@@ -43,7 +45,7 @@ router.post("/:id/delete", async (req, res) => {
     }
 
     // Delete resource from database
-    await Resource.findByIdAndDelete(id);
+    await Resource.findByIdAndUpdate(id, { deleted: true });
 
     res.json({ success: true, message: "Resource deleted successfully" });
   } catch (error: any) {

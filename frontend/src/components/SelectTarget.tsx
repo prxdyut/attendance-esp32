@@ -1,49 +1,64 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { handleFetch } from "../utils/handleFetch";
+import {
+  Box,
+  Checkbox,
+  Fade,
+  FormControl,
+  Input,
+  InputLabel,
+  ListItemButton,
+  ListItemText,
+  MenuItem,
+  Paper,
+  Popper,
+  Radio,
+  Select,
+  TextField,
+  Typography,
+} from "@mui/material";
+import Grid2 from "@mui/material/Unstable_Grid2/Grid2";
+import { grey } from "@mui/material/colors";
+import { FileDownload } from "@mui/icons-material";
 
 type Option = { type: string; label: string; value: string };
-type Header = { type: "header"; label: string };
+type Header = { type: "header"; label: string; typeFor: string };
 type ItemAll = { type: "all" };
 type Item = Option | Header | ItemAll;
-
 type SelectionType = "all" | "userIds" | "batchIds";
-type TargetSelectorProps = {
+
+export type TargetSelectorProps = {
   onSelectionChange?: (type: string, ids: string[]) => void;
   label?: string;
   selectOnly?: "userIds" | "batchIds";
   single?: boolean;
-  defaultSelectionType?: SelectionType;
-  defaultSelectedOptions?: string[];
-  required?: true
+  defaultValue?: { type: SelectionType | null; ids: string[] };
+  readOnly?: true;
+  noPrompt?: boolean;
 };
 
 export function TargetSelector({
   onSelectionChange,
-  label = "Select Target...",
+  label = "Filter Target",
   selectOnly,
   single,
-  defaultSelectedOptions,
-  defaultSelectionType,
-  required
+  defaultValue = { type: null, ids: [] },
+  readOnly,
+  noPrompt,
 }: TargetSelectorProps) {
-  console.log(defaultSelectedOptions)
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
+  const [selectedOptions, setSelectedOptions] = useState<string[]>([
+    ...defaultValue?.ids,
+  ]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(false);
   const [selectionType, setSelectionType] = useState<SelectionType | null>(
-    null
+    defaultValue.type
   );
 
   useEffect(() => {
-    if (defaultSelectionType) setSelectionType(defaultSelectionType);
-    if (defaultSelectedOptions) setSelectedOptions(defaultSelectedOptions);
     if (selectOnly) setSelectionType(selectOnly);
   }, []);
-
-  useEffect(() => {
-    if (defaultSelectedOptions) setSelectedOptions(defaultSelectedOptions)
-  }, [defaultSelectedOptions]);
 
   useEffect(() => {
     if (selectionType && onSelectionChange) {
@@ -51,9 +66,9 @@ export function TargetSelector({
     }
   }, [selectionType, selectedOptions]);
 
-  const popupRef = useRef<HTMLDivElement>(null);
   const [items, setItems] = useState<Item[]>([]);
 
+  const anchorRef = useRef<HTMLElement>(null);
   const toggleOption = (value: string) => {
     if (selectionType === "all") return;
     if (single) {
@@ -68,27 +83,14 @@ export function TargetSelector({
   };
 
   const handleSelectionTypeChange = (
-    type: SelectionType,
     event: React.ChangeEvent<HTMLSelectElement>
   ) => {
+    if (readOnly) return;
     event.preventDefault();
-    setSelectionType(type);
-    setSelectedOptions(type === "all" ? ["all"] : []);
+    setSelectionType(event.target.value as SelectionType);
+    setSelectedOptions(event.target.value === "all" ? ["all"] : []);
     setSearchTerm("");
   };
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        popupRef.current &&
-        !popupRef.current.contains(event.target as Node)
-      ) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   useEffect(() => {
     let items: Item[] = [];
@@ -96,17 +98,30 @@ export function TargetSelector({
       type: "all",
     });
     handleFetch(
-      "/users?role=all",
+      "/users?role=student",
       setLoading,
-      (userIds: {users: any[]}) => {
-        console.log(userIds)
-        items.push({ type: "header", label: "People" });
+      (userIds: { users: any[] }) => {
+        items.push({ type: "header", label: "Student", typeFor: "userIds" });
         userIds.users.map((item) => {
           items.push({
             type: "userIds",
             value: item._id as string,
             label: item.name as string,
-
+          });
+        });
+      },
+      console.log
+    );
+    handleFetch(
+      "/users?role=faculty",
+      setLoading,
+      (userIds: { users: any[] }) => {
+        items.push({ type: "header", label: "Faculty", typeFor: "userIds" });
+        userIds.users.map((item) => {
+          items.push({
+            type: "userIds",
+            value: item._id as string,
+            label: item.name as string,
           });
         });
       },
@@ -115,9 +130,8 @@ export function TargetSelector({
     handleFetch(
       "/batches",
       setLoading,
-      (batchIds: {batches: any[]}) => {
-        items.push({ type: "header", label: "Batches" });
-        console.log(batchIds)
+      (batchIds: { batches: any[] }) => {
+        items.push({ type: "header", label: "Batches", typeFor: "batchIds" });
         batchIds.batches.map((batch) => {
           items.push({
             type: "batchIds",
@@ -134,153 +148,272 @@ export function TargetSelector({
   const filteredItems = useMemo(() => {
     if (!searchTerm) return items;
     return items.filter((item) => {
-      if (item.type === "header" || item.type === "all") return false;
+      if (item.type === "all") return false;
+      if (item.type === "header") return false;
       // @ts-ignore
       return item.label.toLowerCase().includes(searchTerm.toLowerCase());
     });
   }, [items, searchTerm]);
 
+  if (noPrompt)
+    return (
+      <Box
+        sx={{
+          border: 1,
+          borderColor: grey[400],
+          borderRadius: 2.5,
+          py: 1,
+          position: "relative",
+        }}
+      >
+        {selectedOptions.map((option) => (
+          <input type="hidden" name={selectionType || ""} value={option} />
+        ))}
+        <Typography
+          variant="caption"
+          sx={{ position: "absolute", top: "-.6rem", left: ".8rem", bgcolor: 'white', px:.5, opacity: '.8' }}
+        >
+          {label}
+        </Typography>
+        <Grid2 container>
+          <Grid2 xs={12} sx={{ px: 2, py: 1 }}>
+            <Input
+              fullWidth
+              placeholder="Search..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </Grid2>
+          {filteredItems.map((item: any, index) => {
+            switch (item.type) {
+              case "header":
+                return (
+                  selectionType === item?.typeFor && (
+                    <Grid2 xs={12}>
+                      <Typography
+                        key={index}
+                        variant="caption"
+                        sx={{ px: 2, py: 1 }}
+                      >
+                        {item.label}
+                      </Typography>
+                    </Grid2>
+                  )
+                );
+              case "userIds":
+              case "batchIds":
+                return (
+                  selectionType === item.type && (
+                    <Grid2
+                      component={ListItemButton}
+                      xs={6}
+                      key={item.value}
+                      onClick={() => {
+                        if (readOnly) return;
+                        toggleOption(item.value);
+                      }}
+                      sx={{
+                        display: "flex",
+                        gap: 1,
+                        alignItems: "center",
+                        pl: 3,
+                      }}
+                    >
+                      {single ? (
+                        <Radio checked={selectedOptions.includes(item.value)} />
+                      ) : (
+                        <Checkbox
+                          checked={selectedOptions.includes(item.value)}
+                        />
+                      )}
+                      <Typography>{item.label}</Typography>
+                    </Grid2>
+                  )
+                );
+              default:
+                return null;
+            }
+          })}
+        </Grid2>
+      </Box>
+    );
+
   return (
-    <div className="relative">
+    <Box>
       {selectedOptions.map((option) => (
         <input type="hidden" name={selectionType || ""} value={option} />
       ))}
-
-      <button
-        className="border px-2 py-1 rounded"
-        onClick={(e) => {
-          e.preventDefault();
+      <TextField
+        // @ts-ignore
+        ref={anchorRef}
+        fullWidth
+        label={label}
+        onClick={() => {
           setIsOpen(!isOpen);
         }}
-        type='button'
+        sx={{
+          "& .MuiOutlinedInput-notchedOutline": { borderRadius: 2.5 },
+          bgcolor: "white",
+          "& input": {
+            caretColor: "transparent",
+            cursor: "pointer",
+          },
+        }}
+        autoComplete="false"
+        value={
+          selectionType && selectedOptions.length
+            ? single
+              ? (items as any[]).find(
+                  (item: any) => item.value === selectedOptions[0]
+                )?.label
+              : `${selectionType == "all" ? "All" : ""}${
+                  selectionType == "batchIds"
+                    ? `${selectedOptions.length} ${
+                        selectedOptions.length > 1 ? "Batches" : "Batch"
+                      }`
+                    : ""
+                }${
+                  selectionType == "userIds"
+                    ? `${selectedOptions.length} ${
+                        selectedOptions.length > 1 ? "People" : "Person"
+                      }`
+                    : ""
+                }`
+            : ""
+        }
+        InputLabelProps={{
+          shrink: Boolean(selectionType && selectedOptions.length),
+        }}
+        required
+        // onMouseLeave={() => setIsOpen(false)}
+      />
+      <Popper
+        open={isOpen}
+        anchorEl={anchorRef.current}
+        placement="top-end"
+        sx={{ zIndex: 1300 }}
+        transition
+        onMouseLeave={() => setIsOpen(false)}
+        // onMouseEnter={() => setIsOpen(true)}
       >
-        {selectionType && selectedOptions.length ? (
-          <input
-            required={required}
-            readOnly
-            value={
-              single
-                ? items.filter((item) => item?.value === selectedOptions[0])[0]
-                  ?.label
-                : "Selected " +
-                (selectionType != "all" ? selectedOptions.length : "") +
-                " " +
-                selectionType
-            }
-          />
-        ) : (
-          <>
-            {label}
-            <input required={required} className=" w-1" />
-          </>
-        )}
-      </button>
-
-      {isOpen && (
-        <div
-          ref={popupRef}
-          className="absolute mt-2 w-48 border rounded shadow-sm bg-white"
-        >
-          <div className="p-2 border-b border-gray-300">
-            <select
-              value={selectionType || ""}
-              onChange={(e) =>
-                handleSelectionTypeChange(e.target.value as SelectionType, e)
-              }
-              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+        {({ TransitionProps }) => (
+          <Fade {...TransitionProps} timeout={350}>
+            <Paper
+              sx={{
+                width: 400,
+                maxHeight: "50vh",
+                minHeight: "10vh",
+                // borderRadius: 2.5,
+                display: "flex",
+                flexFlow: "column",
+                my: 0.5,
+              }}
+              elevation={4}
             >
-              <option value="">Select type...</option>
-              {selectOnly === "userIds" ? (
-                <option value="userIds">People</option>
-              ) : selectOnly == "batchIds" ? (
-                <option value="batchIds">Batches</option>
-              ) : (
-                <>
-                  <option value="all">All</option>
-                  <option value="batchIds">Batches</option>
-                  <option value="userIds">People</option>
-                </>
-              )}
-            </select>
-          </div>
-          {selectionType != "all" && (
-            <div className="p-2 border-b border-gray-300">
-              <input
-                type="text"
-                placeholder="Search..."
-                value={searchTerm}
-                onChange={(e) => {
-                  e.preventDefault();
-                  setSearchTerm(e.target.value);
-                }}
-                className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-              />
-            </div>
-          )}
-          {selectionType && (
-            <>
-              <ul className="py-1 max-h-48 overflow-y-auto">
-                {selectionType === "all" ? (
-                  <li key="all" className="px-4 py-1">
-                    <span>All selected</span>
-                  </li>
-                ) : (
-                  filteredItems.map((item, index) => {
-                    switch (item.type) {
-                      case "header":
-                        return (selectionType === "userIds" &&
-                          item.label === "userIds") ||
-                          (selectionType === "batchIds" &&
-                            item.label === "batchIds") ? (
-                          <li
-                            key={index}
-                            className="px-2 pt-1 py-0 text-xs text-gray-500"
-                          >
-                            {item.label}
-                          </li>
-                        ) : null;
-                      case "userIds":
-                        return selectionType === "userIds" ? (
-                          <li
-                            key={item.value}
-                            className="px-4 py-1 hover:bg-gray-100 cursor-pointer flex items-center justify-between"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              toggleOption(item.value);
-                            }}
-                          >
-                            <span>{item.label}</span>
-                            {selectedOptions.includes(item.value) && (
-                              <span className="ml-2">✓</span>
-                            )}
-                          </li>
-                        ) : null;
-                      case "batchIds":
-                        return selectionType === "batchIds" ? (
-                          <li
-                            key={item.value}
-                            className="px-4 py-1 hover:bg-gray-100 cursor-pointer flex items-center justify-between"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              toggleOption(item.value);
-                            }}
-                          >
-                            <span>{item.label}</span>
-                            {selectedOptions.includes(item.value) && (
-                              <span className="ml-2">✓</span>
-                            )}
-                          </li>
-                        ) : null;
-                      default:
-                        return null;
-                    }
-                  })
+              <Box p={2}>
+                <FormControl
+                  fullWidth
+                  variant="outlined"
+                  size="small"
+                  sx={{ zIndex: 1500 }}
+                >
+                  <InputLabel>Select type</InputLabel>
+                  <Select
+                    value={selectionType || ""}
+                    // @ts-ignore
+                    onChange={handleSelectionTypeChange}
+                    label="Select type"
+                  >
+                    <MenuItem value="" disabled>
+                      <em>None</em>
+                    </MenuItem>
+                    {selectOnly === undefined && (
+                      <MenuItem value="all">All</MenuItem>
+                    )}
+                    {(selectOnly === "batchIds" ||
+                      selectOnly === undefined) && (
+                      <MenuItem value="batchIds">Batches</MenuItem>
+                    )}
+                    {(selectOnly === "userIds" || selectOnly === undefined) && (
+                      <MenuItem value="userIds">People</MenuItem>
+                    )}
+                  </Select>
+                </FormControl>
+              </Box>
+              <Box sx={{ overflow: "auto", flex: 1 }}>
+                {selectionType !== "all" && (
+                  <Box p={2}>
+                    <Input
+                      fullWidth
+                      placeholder="Search..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </Box>
                 )}
-              </ul>
-            </>
-          )}
-        </div>
-      )}
-    </div>
+
+                {selectionType && (
+                  <Box>
+                    {selectionType === "all" ? (
+                      <MenuItem>
+                        <Typography>All selected</Typography>
+                      </MenuItem>
+                    ) : (
+                      filteredItems.map((item: any, index) => {
+                        switch (item.type) {
+                          case "header":
+                            return (
+                              selectionType === item?.typeFor && (
+                                <Typography
+                                  key={index}
+                                  variant="caption"
+                                  sx={{ px: 2, py: 1 }}
+                                >
+                                  {item.label}
+                                </Typography>
+                              )
+                            );
+                          case "userIds":
+                          case "batchIds":
+                            return (
+                              selectionType === item.type && (
+                                <MenuItem
+                                  key={item.value}
+                                  onClick={() => {
+                                    if (readOnly) return;
+                                    toggleOption(item.value);
+                                  }}
+                                  dense
+                                >
+                                  {single ? (
+                                    <Radio
+                                      checked={selectedOptions.includes(
+                                        item.value
+                                      )}
+                                    />
+                                  ) : (
+                                    <Checkbox
+                                      checked={selectedOptions.includes(
+                                        item.value
+                                      )}
+                                    />
+                                  )}
+                                  <ListItemText primary={item.label} />
+                                </MenuItem>
+                              )
+                            );
+                          default:
+                            return null;
+                        }
+                      })
+                    )}
+                  </Box>
+                )}
+              </Box>
+            </Paper>
+          </Fade>
+        )}
+      </Popper>
+    </Box>
   );
 }

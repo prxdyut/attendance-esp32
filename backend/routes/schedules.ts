@@ -9,6 +9,7 @@ router.get("/", async (req, res) => {
   try {
     const { startDate, endDate, batchId } = req.query;
     let query: any = {};
+    query.deleted = false;
 
     if (startDate && endDate) {
       query.date = {
@@ -23,7 +24,6 @@ router.get("/", async (req, res) => {
 
     const schedules = await Schedule.find(query)
       .populate("batchIds")
-      .populate("scheduledBy")
       .sort({ date: 1, startTime: 1 });
 
     res.json({ success: true, data: schedules });
@@ -37,7 +37,7 @@ router.get("/:id", async (req, res) => {
   try {
     const id = req.params.id;
 
-    const schedule = await Schedule.findById(id);
+    const schedule = await Schedule.findOne({ _id: id, deleted: false });
 
     res.json({ success: true, data: { schedule } });
   } catch (error: any) {
@@ -76,7 +76,13 @@ router.post("/:id/edit", async (req, res) => {
 router.post("/:id/delete", async (req, res) => {
   try {
     const { id } = req.params;
-    await Schedule.findByIdAndDelete(id);
+    await Schedule.findByIdAndUpdate(
+      id,
+      { deleted: true },
+      {
+        new: true,
+      }
+    );
     res.json({ success: true, message: "Schedule deleted successfully" });
   } catch (error: any) {
     res.status(400).json({ success: false, message: error.message });

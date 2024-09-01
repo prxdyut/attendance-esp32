@@ -39,8 +39,23 @@ router.post("/", async (req, res) => {
 // Get All Batches
 router.get("/", async (req, res) => {
   try {
-    const batches = await Batch.find();
-    res.json({ success: true, data: { batches } });
+    const batches = await Batch.find({ deleted: false });
+    const BATCHES = await Promise.all(
+      batches.map(async (batch) => ({
+        ...batch.toJSON(),
+        students: await User.find({
+          role: "student",
+          batchIds: { $in: batch._id },
+          deleted: false,
+        }).populate("batchIds"),
+        faculty: await User.find({
+          role: "faculty",
+          batchIds: { $in: batch._id },
+          deleted: false,
+        }).populate("batchIds"),
+      }))
+    );
+    res.json({ success: true, data: { batches: BATCHES } });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -49,14 +64,43 @@ router.get("/", async (req, res) => {
 // Get A Single Batch
 router.get("/:id", async (req, res) => {
   try {
-    const batch = await Batch.findById(req.params.id);
+    const batch = await Batch.findOne({ _id: req.params.id, deleted: false });
     if (!batch)
       return res
         .status(404)
         .json({ success: false, message: "Batch not found" });
-    const students = await User.find({ role: "student", batchIds: batch._id });
-    const faculty = await User.find({ role: "faculty", batchIds: batch._id });
+    const students = await User.find({
+      role: "student",
+      batchIds: batch._id,
+      deleted: false,
+    }).populate("batchIds");
+    const faculty = await User.find({
+      role: "faculty",
+      batchIds: batch._id,
+      deleted: false,
+    }).populate("batchIds");
     res.json({ success: true, data: { batch, students, faculty } });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get a specific score
+router.get("/:ids/students", async (req, res) => {
+  const ids = req.params.ids;
+  const role = req.query.role;
+
+  try {
+    const students = await User.find({
+      batchIds: { $in: ids.split(",") },
+      role,
+    });
+    if (!students) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Batch not found" });
+    }
+    res.json({ success: true, data: students });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -89,7 +133,12 @@ router.post("/:id/edit", async (req, res) => {
         userRef.batchIds = [batch._id];
       }
       if (userRef?.role == "faculty") {
-        userRef.batchIds = [...userRef.batchIds, batch._id];
+        const newArr = Array.from(
+          new Set([...userRef.batchIds].map((_) => _.toString()))
+        );
+
+        if (!newArr.includes(batch._id.toString()))
+          userRef.batchIds = [...userRef.batchIds, batch._id];
       }
       await userRef?.save();
     }

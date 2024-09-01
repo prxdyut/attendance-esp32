@@ -3,6 +3,26 @@ import { useEffect, useState } from "react";
 import io from "socket.io-client";
 import { handleFetch } from "../utils/handleFetch";
 import { format } from "date-fns";
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Stack,
+  Typography,
+} from "@mui/material";
+import Grid2 from "@mui/material/Unstable_Grid2/Grid2";
+import whatsappLogo from "../assets/logos/whatsapp.png";
+import {
+  CoPresent,
+  People,
+  PeopleAltOutlined,
+  PersonOffOutlined,
+} from "@mui/icons-material";
+import { grey } from "@mui/material/colors";
+
+const isTesting = false;
+
 function getLocalISOString() {
   const date = new Date();
   const offset = date.getTimezoneOffset() * 60000;
@@ -11,6 +31,7 @@ function getLocalISOString() {
     .slice(0, 19)
     .replace("T", " ");
 }
+
 export default function Dashboard() {
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -21,30 +42,29 @@ export default function Dashboard() {
     workingDays: 0,
     holidayStudents: 0,
   });
-  const [holidayFor, setHolidayFor] = useState<any[]>()
-  console.log(getLocalISOString());
+  const [holidayFor, setHolidayFor] = useState<any[]>([]);
+
   const fetchStatistics = async () => {
     handleFetch(
       `/statistics?selectionType=all&startDate=${getLocalISOString()}&endDate=${getLocalISOString()}`,
       setLoading,
-      (data) => {
+      (data: any) => {
         setStats(data.stats);
-        console.log(data.stats);
       },
       console.error
     );
     handleFetch(
       `/statistics/holidayFor?selectionType=all&startDate=${getLocalISOString()}&endDate=${getLocalISOString()}`,
       setLoading,
-      (data) => {
-        setHolidayFor(data.holidayFor)
-        console.log(data, data.holidayFor);
+      (data: any) => {
+        setHolidayFor(data.holidayFor);
       },
       console.error
     );
   };
+
   useEffect(() => {
-    const socket = io("http://localhost:1000/punches"); // Replace with your WebSocket server URL
+    const socket = io("http://localhost:1000/punches");
 
     socket.on("connect", () => {
       console.log("Connected to WebSocket server");
@@ -52,7 +72,6 @@ export default function Dashboard() {
 
     socket.on("cardPunch", (data) => {
       updateDashboard(data);
-      // console.log(data)
     });
 
     return () => {
@@ -60,126 +79,195 @@ export default function Dashboard() {
     };
   }, []);
 
-  const updateDashboard = (punchData) => {
-    // Update logs
-    setLogs((prevLogs: any[]) => [punchData, ...prevLogs].slice(0, 15)); // Keep only the latest 15 logs
-
-    // Update stats
+  const updateDashboard = (punchData: any) => {
+    setLogs((prevLogs) => [punchData, ...prevLogs].slice(0, 15));
     setStats((prevStats) => {
       const newStats = { ...prevStats };
       if (punchData.status === "on time") {
-        newStats.presentChamps++;
+        newStats.present++;
       } else if (punchData.status === "late") {
-        newStats.lateArrivals++;
+        newStats.present++;
+      } else {
+        newStats.absent++;
       }
-      // Add logic for absent and early exits as needed
       return newStats;
     });
   };
-
-  const statsData = [
-    {
-      title: "Present Champs",
-      icon: Users,
-      color: "bg-green-100 text-green-800",
-      value: stats.present,
-    },
-    {
-      title: "Absent Minds",
-      icon: UserMinus,
-      color: "bg-red-100 text-red-800",
-      value: stats.absent,
-    },
-  ];
 
   useEffect(() => {
     fetchStatistics();
   }, []);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6 bg-gray-100 min-h-screen">
-      <div className="flex flex-col gap-6">
-        <div className="bg-white rounded-lg shadow p-6 flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-800">
-              WhatsApp Status
-            </h2>
-            <p className="text-green-600 font-medium">Connected</p>
-            <p className="text-sm text-gray-500">
-              Last Updated: 24 July 2024, 9:24 PM
-            </p>
-          </div>
-          <button className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition duration-300">
-            Retry
-          </button>
-        </div>
+    <Grid2 container spacing={3} sx={{ overflow: "hidden", height: "100%" }}>
+      <Grid2 xs={6} sx={{ height: "100%" }}>
+        <Stack gap={3} sx={{ height: "100%" }}>
+          {/* WhatsApp Integration Card */}
+          <Box>
+            <Card elevation={0} sx={{ borderRadius: 5, bgcolor: grey[100] }}>
+              <CardContent sx={{ p: 2 }}>
+                <Box display={"flex"} sx={{ gap: 3 }}>
+                  <Box>
+                    <Box
+                      component={"img"}
+                      src={whatsappLogo}
+                      sx={{ aspectRatio: "1/1", width: "3rem" }}
+                    />
+                  </Box>
+                  <Box flex={"1"}>
+                    <Typography
+                      fontWeight={500}
+                      variant="subtitle2"
+                      gutterBottom
+                    >
+                      Whatsapp Integration
+                    </Typography>
+                    <Typography fontWeight={700}>
+                      {isTesting ? "Connected (Test Mode)" : "Connected"}
+                    </Typography>
+                    <Typography variant="caption">
+                      Last Updated :{" "}
+                      {format(new Date(), "d MMMM yyyy 'at' h:mm a")}
+                    </Typography>
+                    <Box sx={{ height: "1rem", width: "100%" }} />
+                    <Box display={"flex"} justifyContent={"flex-end"} gap={2}>
+                      <Button variant="outlined">More</Button>
+                      <Button variant="contained">Retry</Button>
+                    </Box>
+                  </Box>
+                </Box>
+              </CardContent>
+            </Card>
+          </Box>
 
-        {/* Stats section */}
-        <div className="grid grid-cols-2 gap-6">
-          {statsData.map((stat, index) => (
-            <div
-              key={index}
-              className={`bg-white rounded-lg shadow p-6 ${stat.color}`}
-            >
-              <stat.icon className="w-8 h-8 mb-4" />
-              <h3 className="text-lg font-semibold">{stat.title}</h3>
-              <p className="text-3xl font-bold mt-2">{stat.value}</p>
-            </div>
-          ))}
-        </div>
+          {/* Present and Absent Cards */}
+          <Grid2 container gap={3}>
+            <Grid2 xs>
+              <Card elevation={0} sx={{ borderRadius: 5, bgcolor: grey[100] }}>
+                <CardContent>
+                  <Box display={"flex"} alignItems={"center"}>
+                    <PeopleAltOutlined fontSize="large" sx={{ mr: 2 }} />
+                    <Typography fontWeight={600} flex={"1"}>
+                      Present
+                    </Typography>
+                    <Typography variant="h6" fontWeight={700}>
+                      {stats.present}
+                    </Typography>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid2>
+            <Grid2 xs>
+              <Card elevation={0} sx={{ borderRadius: 5, bgcolor: grey[100] }}>
+                <CardContent>
+                  <Box display={"flex"} alignItems={"center"}>
+                    <PersonOffOutlined fontSize="large" sx={{ mr: 2 }} />
+                    <Typography fontWeight={600} flex={"1"}>
+                      Absent
+                    </Typography>
+                    <Typography variant="h6" fontWeight={700}>
+                      {stats.absent}
+                    </Typography>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid2>
+          </Grid2>
 
-        <div className="bg-white rounded-lg shadow p-6 flex-grow">
-          <div className="flex items-center mb-4">
-            <Calendar className="w-6 h-6 mr-2 text-blue-500" />
-            <h2 className="text-xl font-semibold text-gray-800">
-              Holiday for
-              <span className="text-gray-600 font-bold">
-                {" "}
-                : {stats.holidayStudents}
-              </span>
-            </h2>
-          </div>
-          {holidayFor?.length ? <div>
-            {holidayFor.map(user => <p>{user.name}</p>)}
-          </div> : <div className=" font-bold">
-            <p className="text-gray-600">No upcoming holidays</p>
-          </div>}
-          <div></div>
-        </div>
+          {/* Holiday For Card */}
+          <Card
+            elevation={0}
+            sx={{ borderRadius: 5, bgcolor: grey[100], height: "100%" }}
+          >
+            <CardContent sx={{ p: 2, height: "100%", display: "flex", gap: 3 }}>
+              <Box>
+                <Calendar />
+              </Box>
+              <Box flex={"1"} display={"flex"} sx={{ flexFlow: "column" }}>
+                <Box display={"flex"} sx={{ mb: 1 }}>
+                  <Typography fontWeight={700} flex={1}>
+                    Holiday For :
+                  </Typography>
+                  <Typography fontWeight={700} variant="h6">
+                    {stats.holidayStudents}
+                  </Typography>
+                </Box>
+                <Stack
+                  gap={1}
+                  sx={{ overflowY: "auto", height: "100%" }}
+                  flex={1}
+                >
+                  {holidayFor.length > 0 ? (
+                    holidayFor.map((user) => (
+                      <Box
+                        key={user.uid}
+                        display={"flex"}
+                        alignItems={"center"}
+                      >
+                        <Typography fontWeight={600}>
+                          {user.name}&nbsp;
+                        </Typography>
+                        <Typography variant="caption">{`(${user.uid})`}</Typography>
+                        <Box flex={1} />
+                        <Typography>
+                          by {Math.random() >= 0.5 ? "User ID" : "Batch ID"}
+                        </Typography>
+                      </Box>
+                    ))
+                  ) : (
+                    <Typography variant="body2">
+                      No holidays scheduled
+                    </Typography>
+                  )}
+                </Stack>
+              </Box>
+            </CardContent>
+          </Card>
+        </Stack>
+      </Grid2>
 
-        <div className="bg-white rounded-lg shadow p-6 flex-grow">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">
-            Weekly Report
-          </h2>
-          <p className="text-gray-600">Report data will be displayed here</p>
-        </div>
-      </div>
-
-      {/* Realtime Logs section */}
-      <div className="bg-white rounded-lg shadow p-6 flex flex-col h-full">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">
-          Realtime Logs
-        </h2>
-        <div className="overflow-auto flex-grow">
-          {logs.map((log, i) => (
-            <div
-              key={i}
-              className="flex items-center justify-between py-3 border-b border-gray-200 last:border-b-0"
-            >
-              <div>
-                <p className="font-semibold text-gray-800">{log.name}</p>
-                <p className="text-sm text-gray-500">{log.uid}</p>
-              </div>
-              <div className="text-right">
-                {/* <p className={`text-sm ${log.status === 'on time' ? 'text-green-600' : 'text-red-600'}`}>
-                  {log.status}
-                </p> */}
-                <p className="text-sm font-medium">{log.time}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
+      {/* Realtime Attendance Logs */}
+      <Grid2 xs={6} sx={{ height: "100%" }}>
+        <Box
+          display={"flex"}
+          sx={{
+            height: "100%",
+            borderRadius: 5,
+            bgcolor: grey[100],
+            p: 2,
+            flexFlow: "column",
+          }}
+        >
+          <Box display={"flex"} alignItems={"center"} gap={2}>
+            <CoPresent fontSize="small" />
+            <Typography fontWeight={600}>Realtime Attendance Logs</Typography>
+            <Box flex={1} />
+            <Typography variant="caption" fontWeight={600}>
+              {isTesting ? "Test Mode" : "connected"}
+            </Typography>
+          </Box>
+          <Stack flex={1} gap={2} sx={{ py: 1, overflowY: "auto" }}>
+            {logs.length > 0 ? (
+              logs.map((log, index) => (
+                <Box key={index} display={"flex"} alignItems={"center"}>
+                  <Box>
+                    <Typography fontWeight={600}>{log.name}</Typography>
+                    <Typography variant="caption">{log.uid}</Typography>
+                  </Box>
+                  <Box flex={1} />
+                  <Typography fontWeight={500} variant="h6">
+                    {log.time}
+                  </Typography>
+                </Box>
+              ))
+            ) : (
+              <Typography variant="body2">
+                No attendance logs available
+              </Typography>
+            )}
+          </Stack>
+        </Box>
+      </Grid2>
+    </Grid2>
   );
 }

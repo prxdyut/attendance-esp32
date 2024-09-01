@@ -1,21 +1,21 @@
+import cors from "cors";
 import express from "express";
 import mongoose from "mongoose";
+import { Server } from "socket.io";
 import batchRoutes from "./routes/batch";
 import userRoutes from "./routes/user";
 import templateRoutes from "./routes/template";
 import holidayRoutes from "./routes/holiday";
 import punchRoutes from "./routes/punch";
 import whatsappRoutes from "./routes/whatsapp";
-import statisticsRoutes from "./routes/statistics"; // Import the statisticsRoutes
+import statisticsRoutes from "./routes/statistics";
 import scheduleRoutes from "./routes/schedules";
 import scoresRoutes from "./routes/scores";
 import feesRoutes from "./routes/fees";
 import resourceRoutes from "./routes/resources";
 import uploadsRoutes from "./routes/uploads";
 import alertRoutes from "./routes/alerts";
-
-import cors from "cors";
-import { Server } from "socket.io";
+import attendanceRoutes from "./routes/attendance";
 import { whatsappSocket } from "./routes/websockets/whatsapp";
 import { setupWebsocket } from "./utils/ssetupWebSocket";
 
@@ -43,6 +43,7 @@ mongoose
 
 app.use("/api", express.static("public"));
 app.use("/api/batches", batchRoutes);
+app.use("/api/attendance", attendanceRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/templates", templateRoutes);
 app.use("/api/holidays", holidayRoutes);

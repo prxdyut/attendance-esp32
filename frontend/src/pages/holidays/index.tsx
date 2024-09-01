@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import { Link, Outlet } from "react-router-dom";
 import { handleFetch } from "../../utils/handleFetch";
-import { Link } from "react-router-dom";
 import {
   Box,
   Button,
@@ -10,6 +10,7 @@ import {
   FormControl,
   IconButton,
   InputAdornment,
+  InputLabel,
   OutlinedInput,
   Paper,
   Stack,
@@ -21,23 +22,24 @@ import {
   TableRow,
   Typography,
 } from "@mui/material";
-import { Add, Delete, Download, Preview, Search } from "@mui/icons-material";
+import {
+  Add,
+  Delete,
+  Download,
+  Preview,
+  RemoveRedEyeOutlined,
+  Search,
+} from "@mui/icons-material";
 import { grey } from "@mui/material/colors";
 import { DateRangeSelector } from "../../components/DateRangeSelector";
 import { format, parseISO } from "date-fns";
 import ModalButton from "../../components/ModalForm";
 import DynamicForm from "../../components/DynamicForm";
+import { HolidayDetails } from "./view";
 
-export const ResourceList = () => {
-  const [loading, setLoading] = useState(false);
-  const [resources, setResources] = useState([]);
-
-  const fetchResources = () =>
-    handleFetch("/resources", setLoading, setResources, console.error);
-
-  useEffect(() => {
-    fetchResources();
-  }, []);
+function Holidays() {
+  const [holidays, setHolidays] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
 
   const [searchTerm, setSearchTerm] = useState<string>("");
   const dateRangeState = useState<[string, string]>([
@@ -46,21 +48,34 @@ export const ResourceList = () => {
   ]);
   const [dateRange] = dateRangeState;
 
-  const filteredResources = resources.filter((resource: any) =>
+  useEffect(() => {
+    fetchHolidays();
+  }, [...dateRange]);
+
+  const fetchHolidays = () => {
+    const searchParams = new URLSearchParams({
+      startDate: dateRange[0],
+      endDate: dateRange[1],
+    });
+    handleFetch(
+      "/holidays?" + searchParams.toString(),
+      setLoading,
+      (data: any[]) => setHolidays(data),
+      console.log
+    );
+  };
+
+  const filteredHolidays = holidays.filter((holiday: any) =>
     (
-      format(parseISO(resource.date), "dd MMM yyyy") +
+      format(parseISO(holiday.date), "dd MMM yyyy") +
       " " +
-      resource.title +
+      holiday.event +
       " " +
-      resource.fileUrl +
+      holiday.batchIds.map((batch: any) => batch.name).join(" ") +
       " " +
-      resource.fileType +
+      holiday.userIds.map((user: any) => user.name).join(" ") +
       " " +
-      resource.batchIds.map((batch: any) => batch.name).join(" ") +
-      " " +
-      resource.userIds.map((user: any) => user.name).join(" ") +
-      " " +
-      (resource.all ? "all" : "")
+      (holiday.all ? "all" : "")
     )
       .toLowerCase()
       .includes(searchTerm.toLowerCase())
@@ -73,14 +88,20 @@ export const ResourceList = () => {
     >
       <Box display={"flex"}>
         <Typography variant="h5" fontWeight={600}>
-          Resources
+          Holidays
         </Typography>
         <Box flex={1} />
         <ModalButton
           modal={
             <DynamicForm
-              key={String(resources.length)}
+              key={String(holidays.length)}
               fields={[
+                {
+                  type: "text",
+                  label: "Event",
+                  name: "event",
+                  required: true,
+                },
                 {
                   type: "date",
                   label: "Date",
@@ -88,33 +109,23 @@ export const ResourceList = () => {
                   required: true,
                 },
                 {
-                  type: "text",
-                  label: "Title",
-                  name: "title",
-                  required: true,
-                },
-                {
-                  type: "fileSelector",
-                  label: "Select File to Upload",
-                  name: "fileUrl",
-                },
-                {
                   type: "targetSelector",
                   label: "Select Target",
                   name: "target",
+                  required: true,
                 },
               ]}
             />
           }
           path="/new"
-          url="/resources"
-          title="New Resource"
+          url="/holidays"
+          title="New Holiday"
           button="Create"
-          onSuccess={fetchResources}
-          success="Created a new Resource Successfully!"
+          onSuccess={fetchHolidays}
+          success="Created a new Holiday Successfully!"
         >
           <Button variant="contained" size="small">
-            <Add /> Create Schedule
+            <Add /> Create Holiday
           </Button>
         </ModalButton>
       </Box>
@@ -123,7 +134,7 @@ export const ResourceList = () => {
           <Box display={"flex"} gap={3}>
             <FormControl fullWidth>
               <OutlinedInput
-                placeholder="Search Score"
+                placeholder="Search Holiday"
                 sx={{ borderRadius: 2.5, bgcolor: "white" }}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -146,7 +157,7 @@ export const ResourceList = () => {
               >
                 <CircularProgress />
               </Box>
-            ) : filteredResources.length > 0 ? (
+            ) : filteredHolidays.length > 0 ? (
               <TableContainer
                 elevation={0}
                 component={Paper}
@@ -157,33 +168,31 @@ export const ResourceList = () => {
                     <TableRow>
                       <TableCell>UID</TableCell>
                       <TableCell>Date</TableCell>
-                      <TableCell>Title</TableCell>
-                      <TableCell>File Type</TableCell>
-                      <TableCell>Messages</TableCell>
+                      <TableCell>Event</TableCell>
+                      <TableCell>Target</TableCell>
                       <TableCell>Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {filteredResources.map((resource: any, index: number) => (
+                    {filteredHolidays.map((holiday: any, index: number) => (
                       <TableRow key={index}>
                         <TableCell>{index + 1}</TableCell>
                         <TableCell>
-                          {format(parseISO(resource.date), "dd MMM yyyy")}
+                          {format(parseISO(holiday.date), "dd MMM yyyy")}
                         </TableCell>
-                        <TableCell>{resource.title}</TableCell>
-                        <TableCell>{resource.fileType}</TableCell>
+                        <TableCell>{holiday.event}</TableCell>
                         <TableCell>
-                          {resource.all && (
+                          {holiday.all && (
                             <Typography variant="caption" fontWeight={600}>
                               All
                             </Typography>
                           )}
-                          {resource.batchIds.length != 0 && (
+                          {holiday.batchIds.length != 0 && (
                             <>
                               <Typography variant="caption" fontWeight={600}>
                                 Batches
                               </Typography>
-                              {resource.batchIds.map(
+                              {holiday.batchIds.map(
                                 (batch: any, index: number) => (
                                   <>
                                     <br />
@@ -193,12 +202,12 @@ export const ResourceList = () => {
                               )}
                             </>
                           )}
-                          {resource.userIds.length != 0 && (
+                          {holiday.userIds.length != 0 && (
                             <>
                               <Typography variant="caption" fontWeight={600}>
                                 Users
                               </Typography>
-                              {resource.userIds.map(
+                              {holiday.userIds.map(
                                 (user: any, index: number) => (
                                   <>
                                     <br />
@@ -210,29 +219,31 @@ export const ResourceList = () => {
                           )}
                         </TableCell>
                         <TableCell sx={{ display: "flex" }}>
-                          {
-                            // @ts-ignore
-                            <IconButton
-                              LinkComponent={Link}
-                              to={resource.fileUrl}
-                              target="_blank"
-                            >
-                              <Download />
+                          <ModalButton
+                            modal={<HolidayDetails />}
+                            path={`/${holiday._id}`}
+                            url=""
+                            title="Holiday Details"
+                            button=""
+                            onSuccess={() => {}}
+                            success=""
+                          >
+                            <IconButton>
+                              <RemoveRedEyeOutlined />
                             </IconButton>
-                          }
-
+                          </ModalButton>
                           <ModalButton
                             modal={
                               <Typography>
                                 Are you sure you want to delete this?
                               </Typography>
                             }
-                            path={`/${resource._id}/delete`}
-                            url={`/resources/${resource._id}/delete`}
-                            title="Delete Schedule"
+                            path={`/${holiday._id}/delete`}
+                            url={`/holidays/${holiday._id}/delete`}
+                            title="Delete Holidays"
                             button="Delete"
-                            onSuccess={fetchResources}
-                            success="Deleted the Schedule Successfully!"
+                            onSuccess={fetchHolidays}
+                            success="Deleted the Holiday Successfully!"
                           >
                             <IconButton>
                               <Delete />
@@ -246,7 +257,7 @@ export const ResourceList = () => {
               </TableContainer>
             ) : (
               <Typography variant="body1" textAlign="center" py={4}>
-                No Resources found.
+                No holidays found.
               </Typography>
             )}
           </Box>
@@ -254,4 +265,6 @@ export const ResourceList = () => {
       </Card>
     </Stack>
   );
-};
+}
+
+export default Holidays;

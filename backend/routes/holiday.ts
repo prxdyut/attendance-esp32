@@ -7,7 +7,6 @@ import { endOfDay, startOfDay } from "date-fns";
 
 const router = express.Router();
 
-// Create a new holiday
 router.post("/", async (req, res) => {
   try {
     const holiday = new Holiday({ ...req.body, all: req.body.all === "all" });
@@ -55,9 +54,52 @@ router.get("/", async (req, res) => {
           $gte: start,
           $lte: end,
         },
-      });
-    else holidays = await Holiday.find();
+        deleted: false,
+      })
+        .populate("batchIds")
+        .populate("userIds");
+
     res.json({ success: true, data: holidays });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.get("/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    let holiday: any = await Holiday.findOne({ _id: id, deleted: false })
+      .populate("batchIds")
+      .populate("userIds");
+
+    if (holiday && holiday.batchIds && holiday.batchIds.length > 0) {
+      const batchUsers = await User.find({
+        batchIds: { $in: holiday.batchIds },
+      });
+      holiday.userIds = batchUsers;
+    }
+
+    res.json({ success: true, data: holiday });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.post("/:id/delete", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const resource = await Holiday.findById(id);
+    if (!resource) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Resource not found" });
+    }
+
+    await Holiday.findByIdAndUpdate(id, { deleted: true });
+
+    res.json({ success: true, message: "Resource deleted successfully" });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }

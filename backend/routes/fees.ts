@@ -2,18 +2,88 @@
 
 import express from "express";
 import { User, FeeInstallment } from "../mongodb/models";
-
+import { fetchData } from "./statistics";
+import { Types } from "mongoose";
+// import type { ObjectId } from "mongoose";
+const { ObjectId } = Types;
 const router = express.Router();
+
+router.get("/", async (req, res) => {
+  console.log("students");
+  try {
+    const students = await User.aggregate([
+      { $match: { role: "student" } },
+      {
+        $lookup: {
+          from: "feeinstallments",
+          localField: "_id",
+          foreignField: "userId",
+          as: "installments",
+        },
+      },
+      {
+        $addFields: {
+          totalPaid: { $sum: "$installments.amount" },
+          remainingAmount: {
+            $subtract: ["$totalFees", { $sum: "$installments.amount" }],
+          },
+        },
+      },
+      {
+        $lookup: {
+          from: "batches", // Collection name for the Batch model
+          localField: "batchIds",
+          foreignField: "_id",
+          as: "batches",
+        },
+      },
+      {
+        $project: {
+          name: 1,
+          totalFees: 1,
+          totalPaid: 1,
+          remainingAmount: 1,
+          batches: { _id: 1, name: 1 }, // Include only the necessary batch details
+        },
+      },
+      { $sort: { createdAt: -1 } },
+    ]);
+
+    res.json({ success: true, data: students });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 
 // Get fee statistics
 router.get("/statistics", async (req, res) => {
   try {
+    const { selectionType, selectedIds } = req.query;
+
+    let userIds: any[] = [];
+
+    if (selectionType && selectedIds) {
+      const { userIds: fetchedUserIds } = await fetchData(
+        selectionType as string,
+        selectedIds as string
+      );
+      userIds = fetchedUserIds.map((_) => new ObjectId(_));
+    }
+
+    const matchStage =
+      userIds.length > 0
+        ? { $match: { _id: { $in: userIds } } }
+        : { $match: { role: "student" } };
+
     const totalFees = await User.aggregate([
-      { $match: { role: "student" } },
+      matchStage,
       { $group: { _id: null, total: { $sum: "$totalFees" } } },
     ]);
 
+    console.log(totalFees);
+
     const paidFees = await FeeInstallment.aggregate([
+      ...(userIds.length > 0 ? [{ $match: { userId: { $in: userIds } } }] : []),
       { $group: { _id: null, total: { $sum: "$amount" } } },
     ]);
 
@@ -68,17 +138,16 @@ router.get("/defaulters", async (req, res) => {
 });
 
 // Update fee installment
-router.post("/installment", async (req, res) => {
+router.post("/:id/installment", async (req, res) => {
   try {
-    const { userIds } = req.body;
-
+    const userId = req.params.id;
     const installment = new FeeInstallment({
-      userId: userIds,
+      userId,
       ...req.body,
     });
     await installment.save();
 
-    const user = await User.findById(userIds);
+    const user = await User.findById(userId);
     if (user) {
       user.totalPaid += req.body.amount;
       await user.save();
@@ -94,12 +163,10 @@ router.post("/set-total-fees", async (req, res) => {
     const { userIds, totalFees } = req.body;
 
     if (!userIds || !totalFees) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "User ID and total fees are required",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "User ID and total fees are required",
+      });
     }
 
     const user = await User.findById(userIds);

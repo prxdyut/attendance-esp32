@@ -18,7 +18,6 @@ export function CreateScore() {
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [students, setStudents] = useState([]);
 
-
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-4">Create New Score</h1>
@@ -99,7 +98,7 @@ export function CreateScore() {
             onSelectionChange={(type: string, ids: string[]) => {
               if (ids.length) {
                 handleFetch(
-                  "/scores/" + ids.join(",") + "/batch",
+                  "/batches/" + ids.join(",") + "/students?role=student",
                   setLoadingStudents,
                   setStudents,
                   console.error
@@ -117,7 +116,11 @@ export function CreateScore() {
               {students.map((student: any) => (
                 <>
                   <label>{student.name}</label>
-                  <input type="text" name={`obtained`} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" />
+                  <input
+                    type="text"
+                    name={`obtained`}
+                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  />
                 </>
               ))}
             </div>

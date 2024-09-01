@@ -1,10 +1,11 @@
 import React, { useState } from "react";
 import { handleSubmit } from "../../utils/handleSubmit";
 import { TargetSelector } from "../../components/SelectTarget";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 
 export const FeeInstallment = () => {
   const [loading, setLoading] = useState(false);
+  const id = useParams().id;
 
   const onSubmit = (event) => {
     handleSubmit(
@@ -19,11 +20,7 @@ export const FeeInstallment = () => {
   return (
     <form onSubmit={onSubmit} className="grid grid-cols-2 gap-4">
       <label>Student ID:</label>
-      <TargetSelector
-        label="Select Student"
-        selectOnly="userIds"
-        single={true}
-      />
+      <input className="border" name="userIds" type="text" value={id} />
       <label>Mode:</label>
       <input className="border" name="mode" type="text" required />
       <label>Reference:</label>

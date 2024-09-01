@@ -12,6 +12,11 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.629.0",
     "@aws-sdk/lib-storage": "^3.629.0",
+    "@emotion/react": "^11.13.0",
+    "@emotion/styled": "^11.13.0",
+    "@mui/icons-material": "^5.16.7",
+    "@mui/material": "^5.16.7",
+    "@mui/x-date-pickers": "^7.14.0",
     "date-fns": "^3.6.0",
     "lucide-react": "^0.417.0",
     "minio": "^8.0.1",

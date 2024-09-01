@@ -7,8 +7,6 @@ import { TargetSelector } from "../../components/SelectTarget";
 
 export const ResourceUpload = () => {
   const [loading, setLoading] = useState(false);
-  const [title, setTitle] = useState("");
-  const [fileUrl, setFileUrl] = useState("");
 
   const onSubmit = async (e: any) => {
     handleSubmit(e, "/resources", setLoading, console.log, console.error);
@@ -16,18 +14,23 @@ export const ResourceUpload = () => {
 
   return (
     <form onSubmit={onSubmit} className="grid grid-cols-2 gap-4">
+      <label>Date:</label>
+      <input
+        className="border"
+        type="date"
+        name="date"
+        required
+      />
       <label>Title:</label>
       <input
         className="border"
         type="text"
         name="title"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
         required
       />
       <label>File:</label>
       <FileUploader name="fileUrl" />
-      {fileUrl && <p>File uploaded successfully</p>}
+      <label>Target:</label>
       <TargetSelector />
       <button
         type="submit"

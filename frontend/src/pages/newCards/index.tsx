@@ -1,87 +1,155 @@
-import React, { useState, useEffect } from 'react';
-import { handleFetch } from '../../utils/handleFetch';
-import { Search } from 'lucide-react';
-import { format, subDays } from 'date-fns';
+import React, { useState, useEffect } from "react";
+import { handleFetch } from "../../utils/handleFetch";
+import { format, subDays } from "date-fns";
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  CircularProgress,
+  FormControl,
+  InputAdornment,
+  InputLabel,
+  OutlinedInput,
+  Paper,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Typography,
+} from "@mui/material";
+import { grey } from "@mui/material/colors";
+import { Add, Search } from "@mui/icons-material";
+import { DatePicker, LocalizationProvider } from "@mui/x-date-pickers";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFnsV3";
+import { DateRangeSelector } from "../../components/DateRangeSelector";
 
 export default function NewCards() {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState({ newCards: [] });
-  const [startDate, setStartDate] = useState(format(subDays(new Date(), 7), 'yyyy-MM-dd'));
-  const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [searchTerm, setSearchTerm] = useState('');
-  console.log({ data })
+  const [startDate, setStartDate] = useState(
+    format(subDays(new Date(), 7), "yyyy-MM-dd")
+  );
+  const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const dateRangeState = useState<[String, String]>([
+    format(new Date(), "yyyy-MM-dd"),
+    format(new Date(), "yyyy-MM-dd"),
+  ]);
+  const [dateRange] = dateRangeState;
+
   useEffect(() => {
-    handleFetch(`/punches/new?startDate=${startDate}&endDate=${endDate}`, setLoading, setData, console.error);
+    handleFetch(
+      `/punches/new?startDate=${startDate}&endDate=${endDate}`,
+      setLoading,
+      setData,
+      console.error
+    );
   }, [startDate, endDate]);
 
-  const filteredCards = data.newCards.filter((card: any) =>
-    card.uid.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    format(new Date(card.timestamp), "do MMMM yyyy 'at' hh:mm a").toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredCards = data.newCards.filter(
+    (card: any) =>
+      card.uid.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      format(new Date(card.timestamp), "do MMMM yyyy 'at' hh:mm a")
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase())
   );
 
+  const handleNewUser = (uid: any) => {
+    // Navigate to /users/new with the UID
+    console.log(`Navigating to /users/new with UID: ${uid}`);
+    // Implement your navigation logic here
+  };
+
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-8">New Cards</h1>
-
-        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-          <div className="flex flex-wrap gap-4 mb-4">
-            <input
-              type="date"
-              className="border rounded px-3 py-2"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
-            <input
-              type="date"
-              className="border rounded px-3 py-2"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-            />
-          </div>
-
-          <div className="relative flex-grow mb-4">
-            <input
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Search new cards..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
-          </div>
-        </div>
-
-        {loading && (
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading data...</p>
-          </div>
-        )}
-
-        {filteredCards.length > 0 && (
-          <div className="bg-white shadow rounded-lg p-6">
-            <h3 className="text-xl font-semibold mb-2">New Cards</h3>
-            <div className="overflow-x-auto">
-              <table className="min-w-full bg-white">
-                <thead className="bg-gray-100">
-                  <tr>
-                    <th className="py-2 px-4 text-left">UID</th>
-                    <th className="py-2 px-4 text-left">Timestamp</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredCards.map((card: any, index: number) => (
-                    <tr key={index} className="border-b">
-                      <td className="py-2 px-4">{card.uid}</td>
-                      <td className="py-2 px-4">{format(new Date(card.timestamp), "do MMMM yyyy 'at' hh:mm a")}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+    <Stack
+      sx={{ overflow: "hidden", height: "100%", flexFlow: "column" }}
+      gap={2}
+    >
+      <Typography variant="h5" fontWeight={600}>
+        New Cards
+      </Typography>
+      <Card elevation={0} sx={{ borderRadius: 5, bgcolor: grey[100] }}>
+        <CardContent sx={{display: 'flex', flexFlow:'column', gap:3}}>
+          <Box display={"flex"} gap={3}>
+            <FormControl fullWidth>
+              <OutlinedInput
+                placeholder="Search New Cards"
+                sx={{ borderRadius: 2.5 , bgcolor: 'white'}}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                startAdornment={
+                  <InputAdornment position="start">
+                    <Search />
+                  </InputAdornment>
+                }
+              />
+            </FormControl>
+            <DateRangeSelector state={dateRangeState} />
+          </Box>
+          <Box>
+            {loading ? (
+              <Box
+                display="flex"
+                justifyContent="center"
+                alignItems="center"
+                py={8}
+              >
+                <CircularProgress />
+              </Box>
+            ) : filteredCards.length > 0 ? (
+              <TableContainer
+                elevation={0}
+                component={Paper}
+                sx={{ borderRadius: 2 }}
+              >
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>UID</TableCell>
+                      <TableCell>Date</TableCell>
+                      <TableCell>Time</TableCell>
+                      <TableCell>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredCards.map((card: any, index: number) => {
+                      const cardDate = new Date(card.timestamp);
+                      return (
+                        <TableRow key={index}>
+                          <TableCell>{card.uid}</TableCell>
+                          <TableCell>
+                            {format(cardDate, "do MMMM yyyy")}
+                          </TableCell>
+                          <TableCell>{format(cardDate, "hh:mm a")}</TableCell>
+                          <TableCell>
+                            <Button
+                              variant="contained"
+                              startIcon={<Add />}
+                              onClick={() => handleNewUser(card.uid)}
+                              size="small"
+                            >
+                              New User
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            ) : (
+              <Typography variant="body1" textAlign="center" py={4}>
+                No new cards found.
+              </Typography>
+            )}
+          </Box>
+        </CardContent>
+      </Card>
+    </Stack>
   );
 }

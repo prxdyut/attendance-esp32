@@ -1,11 +1,10 @@
-// components/SetTotalFeesForm.tsx
-
 import React, { useState } from "react";
 import { handleSubmit } from "../../utils/handleSubmit";
-import { TargetSelector } from "../../components/SelectTarget";
+import { useParams } from "react-router-dom";
 
 export const SetTotalFeesForm = () => {
   const [loading, setLoading] = useState(false);
+  const id = useParams().id;
 
   const onSubmit = (event) => {
     handleSubmit(
@@ -20,11 +19,7 @@ export const SetTotalFeesForm = () => {
   return (
     <form onSubmit={onSubmit} className="grid grid-cols-2 gap-4">
       <label>Student ID:</label>
-      <TargetSelector
-        label="Select Student"
-        selectOnly="userIds"
-        single={true}
-      />
+      <input className="border" name="userIds" type="text" value={id} />
       <label>Total Fees:</label>
       <input className="border" name="totalFees" type="number" required />
       <button

@@ -1,141 +1,362 @@
 // components/LectureScheduler.js
-import React, { useState, useEffect } from 'react';
-import { handleFetch } from '../../utils/handleFetch';
-import { format, parseISO } from 'date-fns';
-import { TargetSelector } from '../../components/SelectTarget';
-import { handleSubmit } from '../../utils/handleSubmit';
-import { Link } from 'react-router-dom';
-import { Delete, Edit, Plus, Search } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { handleFetch } from "../../utils/handleFetch";
+import { endOfMonth, format, parseISO, startOfMonth } from "date-fns";
+import { Edit, Search } from "lucide-react";
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  CircularProgress,
+  FormControl,
+  IconButton,
+  InputAdornment,
+  OutlinedInput,
+  Paper,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Typography,
+} from "@mui/material";
+import { grey } from "@mui/material/colors";
+import { DateRangeSelector } from "../../components/DateRangeSelector";
+import { Add, ControlPointDuplicate, Delete } from "@mui/icons-material";
+import ModalButton from "../../components/ModalForm";
+import DynamicForm, {
+  defaultDate,
+  defaultTime,
+} from "../../components/DynamicForm";
+import { useLocation } from "react-router-dom";
 
-export function Schedule() {
-    const [schedules, setSchedules] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-    const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-    const [selectedBatch, setSelectedBatch] = useState('');
-    const [searchTerm, setSearchTerm] = useState<string>("");
+export default function Schedule() {
+  const [schedules, setSchedules] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState<string>("");
 
-    useEffect(() => {
-        fetchSchedules();
-    }, [startDate, endDate, selectedBatch]);
+  const dateRangeState = useState<[string, string]>([
+    format(startOfMonth(new Date()), "yyyy-MM-dd"),
+    format(endOfMonth(new Date()), "yyyy-MM-dd"),
+  ]);
+  const [dateRange] = dateRangeState;
 
-    const fetchSchedules = () => {
-        const queryParams = new URLSearchParams({
-            startDate,
-            endDate,
-        });
-        if (selectedBatch) queryParams.set('batchId', selectedBatch)
+  useEffect(() => {
+    fetchSchedules();
+  }, [...dateRange]);
 
-        handleFetch(
-            `/schedules?${queryParams}`,
-            setLoading,
-            (data) => {
-                setSchedules(data)
-            },
-            (error) => {
-                console.error('Error fetching schedules:', error);
-                setSchedules([]);
+  const fetchSchedules = () => {
+    const queryParams = new URLSearchParams({
+      startDate: dateRange[0],
+      endDate: dateRange[1],
+    });
+
+    handleFetch(
+      `/schedules?${queryParams}`,
+      setLoading,
+      (data: any) => {
+        setSchedules(data);
+      },
+      (error: any) => {
+        console.error("Error fetching schedules:", error);
+        setSchedules([]);
+      }
+    );
+  };
+
+  const filteredSchedule = schedules.filter((sched: any) =>
+    (
+      format(parseISO(sched.date), "dd MMM yyyy") +
+      " " +
+      sched.subject +
+      " " +
+      sched.batchIds.name
+    )
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <React.Fragment>
+      <Stack
+        sx={{ overflow: "hidden", height: "100%", flexFlow: "column" }}
+        gap={2}
+      >
+        <Box display={"flex"}>
+          <Typography variant="h5" fontWeight={600}>
+            Schedules
+          </Typography>
+          <Box flex={1} />
+          <ModalButton
+            modal={
+              <DynamicForm
+                key={String(schedules.length)}
+                fields={[
+                  {
+                    type: "date",
+                    label: "Date",
+                    name: "date",
+                    required: true,
+                  },
+                  {
+                    type: "text",
+                    label: "Subject",
+                    name: "subject",
+                    required: true,
+                  },
+                  {
+                    type: "time",
+                    label: "Start Time",
+                    name: "startTime",
+                    required: true,
+                  },
+                  {
+                    type: "time",
+                    label: "End Time",
+                    name: "endTime",
+                    required: true,
+                  },
+                  {
+                    type: "targetSelector",
+                    label: "Select Batch",
+                    selectOnly: "batchIds",
+                    name: "target",
+                    single: true,
+                  },
+                ]}
+              />
             }
-        );
-    };
-
-    console.log(schedules)
-
-    const filteredSchedule = schedules.filter((sched) =>
-        (format(parseISO(sched.date), 'dd MMM yyyy') + ' ' + sched.subject + ' ' + sched.batchId?.name + ' ' + sched.scheduledBy.name).toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    return (
-        <div className="min-h-screen bg-gray-100">
-            <div className="container mx-auto px-4 py-8">
-                <h1 className="text-3xl font-bold text-gray-800 mb-8">Lecture Scheduler</h1>
-
-                <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-                    <div className="flex flex-col md:flex-row md:items-center mb-4 md:mb-0">
-                        <div className="relative flex-grow mb-4 md:mb-0 md:mr-4">
-                            <input
-                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="Search useres..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                            <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
-                        </div>
-                        <Link
-                            to="/schedules/new"
-                            className="inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300"
-                        >
-                            <Plus size={20} className="mr-2" />
-                            Create Schedule
-                        </Link>
-                    </div>
-                </div>
-                <div className="bg-white rounded-lg shadow-md p-6">
-                    <h2 className="text-xl font-semibold mb-4">View Schedules</h2>
-                    <div className="flex flex-wrap gap-4 mb-4">
-                        <input
-                            type="date"
-                            value={startDate}
-                            onChange={(e) => setStartDate(e.target.value)}
-                            className="border rounded px-3 py-2"
-                        />
-                        <input
-                            type="date"
-                            value={endDate}
-                            onChange={(e) => setEndDate(e.target.value)}
-                            className="border rounded px-3 py-2"
-                        />
-                        <TargetSelector
-                            onSelectionChange={(type, ids) => setSelectedBatch(ids[0])}
-                            label="Select Batch"
-                            selectOnly="batchIds"
-                            single={true}
-                        />
-                    </div>
-
-                    {loading ? (
-                        <div className="text-center py-8">
-                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                            <p className="mt-4 text-gray-600">Loading schedules...</p>
-                        </div>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full bg-white">
-                                <thead className="bg-gray-100">
-                                    <tr>
-                                        <th className="py-2 px-4 text-left">Date</th>
-                                        <th className="py-2 px-4 text-left">Batch</th>
-                                        <th className="py-2 px-4 text-left">Subject</th>
-                                        <th className="py-2 px-4 text-left">Start Time</th>
-                                        <th className="py-2 px-4 text-left">End Time</th>
-                                        <th className="py-2 px-4 text-left">Scheduled By</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filteredSchedule.map((schedule) => (
-                                        <tr key={schedule._id} className="border-b">
-                                            <td className="py-2 px-4">{format(parseISO(schedule.date), 'dd MMM yyyy')}</td>
-                                            <td className="py-2 px-4">{schedule.batchIds?.name}</td>
-                                            <td className="py-2 px-4">{schedule.subject}</td>
-                                            <td className="py-2 px-4">{schedule.startTime}</td>
-                                            <td className="py-2 px-4">{schedule.endTime}</td>
-                                            <td className="py-2 px-4">{schedule.scheduledBy.name}</td>
-                                            <td className="py-2 px-4">
-                                                <Link to={'/schedules/' + schedule._id + '/edit'}>
-                                                    <Edit />
-                                                </Link>
-                                                <Link to={'/schedules/' + schedule._id + '/delete'}>
-                                                    <Delete />
-                                                </Link>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
+            path="/new"
+            url="/schedules"
+            title="New Schedule"
+            button="Create"
+            onSuccess={() => fetchSchedules()}
+            success="Created a new Schedule Successfully!"
+          >
+            <Button variant="contained" size="small">
+              <Add /> Create Schedule
+            </Button>
+          </ModalButton>
+        </Box>
+        <Card elevation={0} sx={{ borderRadius: 5, bgcolor: grey[100] }}>
+          <CardContent sx={{ display: "flex", flexFlow: "column", gap: 3 }}>
+            <Box display={"flex"} gap={3}>
+              <FormControl fullWidth>
+                <OutlinedInput
+                  placeholder="Search Schedule"
+                  sx={{ borderRadius: 2.5, bgcolor: "white" }}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  startAdornment={
+                    <InputAdornment position="start">
+                      <Search />
+                    </InputAdornment>
+                  }
+                />
+              </FormControl>
+              <DateRangeSelector state={dateRangeState} />
+            </Box>
+            <Box>
+              {loading && filteredSchedule.length < 0 ? (
+                <Box
+                  display="flex"
+                  justifyContent="center"
+                  alignItems="center"
+                  py={8}
+                >
+                  <CircularProgress />
+                </Box>
+              ) : filteredSchedule.length > 0 ? (
+                <TableContainer
+                  elevation={0}
+                  component={Paper}
+                  sx={{ borderRadius: 2 }}
+                >
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>UID</TableCell>
+                        <TableCell>Batch</TableCell>
+                        <TableCell>Subject</TableCell>
+                        <TableCell>Start</TableCell>
+                        <TableCell>End</TableCell>
+                        <TableCell>Actions</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {filteredSchedule.map((schedule: any, index: number) => {
+                        return (
+                          <TableRow key={index}>
+                            <TableCell>
+                              {format(parseISO(schedule.date), "dd MMM yyyy")}
+                            </TableCell>
+                            <TableCell>{schedule.batchIds.name}</TableCell>
+                            <TableCell>{schedule.subject}</TableCell>
+                            <TableCell>{schedule.startTime}</TableCell>
+                            <TableCell>{schedule.endTime}</TableCell>
+                            <TableCell sx={{ display: "flex", gap: 1 }}>
+                              <ModalButton
+                                modal={
+                                  <DynamicForm
+                                    fields={[
+                                      {
+                                        type: "date",
+                                        label: "Date",
+                                        name: "date",
+                                        required: true,
+                                        defaultValue: defaultDate(
+                                          schedule.date
+                                        ),
+                                      },
+                                      {
+                                        type: "text",
+                                        label: "Subject",
+                                        name: "subject",
+                                        required: true,
+                                        defaultValue: schedule.subject,
+                                      },
+                                      {
+                                        type: "time",
+                                        label: "Start Time",
+                                        name: "startTime",
+                                        required: true,
+                                        defaultValue: defaultDate(
+                                          schedule.startTime
+                                        ),
+                                      },
+                                      {
+                                        type: "time",
+                                        label: "End Time",
+                                        name: "endTime",
+                                        required: true,
+                                        defaultValue: defaultDate(
+                                          schedule.endTime
+                                        ),
+                                      },
+                                      {
+                                        type: "targetSelector",
+                                        label: "Select Batch",
+                                        selectOnly: "batchIds",
+                                        single: true,
+                                        name: "target",
+                                        defaultValue: {
+                                          type: "batchIds",
+                                          ids: [schedule.batchIds._id],
+                                        },
+                                      },
+                                    ]}
+                                  />
+                                }
+                                path={`/${schedule._id}/edit`}
+                                url={`/schedules/${schedule._id}/edit`}
+                                title="Edit Schedule"
+                                button="Save"
+                                onSuccess={() => fetchSchedules()}
+                                success="Updated the Schedule Successfully!"
+                              >
+                                <IconButton>
+                                  <Edit />
+                                </IconButton>
+                              </ModalButton>
+                              <ModalButton
+                                modal={
+                                  <DynamicForm
+                                    fields={[
+                                      {
+                                        type: "date",
+                                        label: "Date",
+                                        name: "date",
+                                        required: true,
+                                        defaultValue: defaultDate(
+                                          schedule.date
+                                        ),
+                                      },
+                                      {
+                                        type: "text",
+                                        label: "Subject",
+                                        name: "subject",
+                                        required: true,
+                                        defaultValue: schedule.subject,
+                                      },
+                                      {
+                                        type: "time",
+                                        label: "Start Time",
+                                        name: "startTime",
+                                        required: true,
+                                        defaultValue: defaultTime(
+                                          schedule.startTime
+                                        ),
+                                      },
+                                      {
+                                        type: "time",
+                                        label: "End Time",
+                                        name: "endTime",
+                                        required: true,
+                                        defaultValue: defaultTime(
+                                          schedule.endTime
+                                        ),
+                                      },
+                                      {
+                                        type: "targetSelector",
+                                        label: "Select Batch",
+                                        selectOnly: "batchIds",
+                                        single: true,
+                                        name: "target",
+                                        defaultValue: {
+                                          type: "batchIds",
+                                          ids: [schedule.batchIds._id],
+                                        },
+                                      },
+                                    ]}
+                                  />
+                                }
+                                path={`/${schedule._id}/duplicate`}
+                                url={`/schedules`}
+                                title="Duplicate Schedule"
+                                button="Save"
+                                onSuccess={() => fetchSchedules()}
+                                success="Duplicated the Schedule Successfully!"
+                              >
+                                <IconButton>
+                                  <ControlPointDuplicate />
+                                </IconButton>
+                              </ModalButton>
+                              <ModalButton
+                                modal={
+                                  <Typography>
+                                    Are you sure you want to delete this?
+                                  </Typography>
+                                }
+                                path={`/${schedule._id}/delete`}
+                                url={`/schedules/${schedule._id}/delete`}
+                                title="Delete Schedule"
+                                button="Delete"
+                                onSuccess={() => fetchSchedules()}
+                                success="Deleted the Schedule Successfully!"
+                              >
+                                <IconButton>
+                                  <Delete />
+                                </IconButton>
+                              </ModalButton>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              ) : (
+                <Typography variant="body1" textAlign="center" py={4}>
+                  No Schedules found.
+                </Typography>
+              )}
+            </Box>
+          </CardContent>
+        </Card>
+      </Stack>
+    </React.Fragment>
+  );
 }

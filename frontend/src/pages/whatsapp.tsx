@@ -3,20 +3,61 @@ import { handleSubmit } from "../utils/handleSubmit";
 import { handleFetch } from "../utils/handleFetch";
 import AutoReloadImage from "../components/AutoReloadingImage";
 import LoadingOverlay from "../components/LoadingOverlay";
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  CircularProgress,
+  Container,
+  Grid,
+  TextField,
+  Typography,
+  List,
+  ListItem,
+  ListItemText,
+  Paper,
+  Chip,
+  Tooltip,
+  IconButton,
+  Divider,
+  Stack,
+} from "@mui/material";
+import {
+  Refresh as RefreshIcon,
+  Login as LoginIcon,
+  Logout as LogoutIcon,
+  Replay as ReplayIcon,
+  CameraAlt as CameraAltIcon,
+  Send as SendIcon,
+  Error as ErrorIcon,
+} from "@mui/icons-material";
+import { grey } from "@mui/material/colors";
+import Grid2 from "@mui/material/Unstable_Grid2/Grid2";
 
 interface FailedMessage {
-  userId: any;
+  userId: {
+    name: string;
+    phone: string;
+  };
   message: string;
   error: string;
   screen: string;
 }
 
+interface Stats {
+  messagesToday: number;
+  messagesThisMonth: number;
+  sendRate: number;
+  failedMessages: number;
+}
+
 export default function Whatsapp() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [qrCode, setQrCode] = useState(null);
+  const [qrCode, setQrCode] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [stats, setStats] = useState({
+  const [error, setError] = useState<string | null>(null);
+  const [stats, setStats] = useState<Stats>({
     messagesToday: 0,
     messagesThisMonth: 0,
     sendRate: 0,
@@ -33,7 +74,7 @@ export default function Whatsapp() {
     handleFetch(
       "/whatsapp/api-status",
       setLoading,
-      (data: any) => {
+      (data: { isLoggedIn: boolean }) => {
         console.log(data);
         setIsLoggedIn(data.isLoggedIn);
       },
@@ -45,9 +86,12 @@ export default function Whatsapp() {
     handleFetch(
       "/whatsapp/failed-messages",
       setLoading,
-      (data: any) => {
+      (data: { failedMessages: FailedMessage[] }) => {
         setFailedMessages(data.failedMessages);
-        setStats((_) => ({ ..._, failedMessages: data.failedMessages.length }));
+        setStats((prev) => ({
+          ...prev,
+          failedMessages: data.failedMessages.length,
+        }));
         console.log(data);
       },
       setError
@@ -67,11 +111,11 @@ export default function Whatsapp() {
     );
   };
 
-  const login = async (e: any) => {
+  const login = async () => {
     handleFetch(
       "/whatsapp/login",
       setLoading,
-      (data: any) => {
+      (data: { qrCodeUrl?: string }) => {
         console.log(data);
         if (data.qrCodeUrl) {
           setQrCode(data.qrCodeUrl);
@@ -84,7 +128,7 @@ export default function Whatsapp() {
     );
   };
 
-  const logout = async (e: any) => {
+  const logout = async (e: React.FormEvent) => {
     handleSubmit(
       e,
       "/whatsapp/logout",
@@ -97,7 +141,7 @@ export default function Whatsapp() {
     );
   };
 
-  const restart = async (event: any) => {
+  const restart = async (event: React.FormEvent) => {
     handleSubmit(
       event,
       "/whatsapp/reload",
@@ -109,7 +153,7 @@ export default function Whatsapp() {
     );
   };
 
-  const sendTestMessage = async (event: any) => {
+  const sendTestMessage = async (event: React.FormEvent<HTMLFormElement>) => {
     handleSubmit(
       event,
       "/whatsapp/send-test-message",
@@ -125,7 +169,7 @@ export default function Whatsapp() {
     handleFetch(
       "/whatsapp/screenshot",
       setLoading,
-      (data: any) => {
+      (data: { screenshotPath: string }) => {
         window.open(`/api/${data.screenshotPath}`);
       },
       setError
@@ -133,174 +177,269 @@ export default function Whatsapp() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 py-6 flex flex-col justify-center sm:py-12">
-      {loading && <LoadingOverlay />}
+    <Box
+      sx={{
+        height: "100%",
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      {/* {loading && <LoadingOverlay />} */}
+      <Stack
+        sx={{
+          overflow: "auto",
+          height: "100%",
+          flexFlow: "column",
+          pb: 2,
+          flex: 1,
+        }}
+        gap={2}
+      >
+        <Typography variant="h5" fontWeight={600}>
+          Whatsapp
+        </Typography>
 
-      <div className="relative py-3 sm:max-w-xl sm:mx-auto">
-        <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-light-blue-500 shadow-lg transform -skew-y-6 sm:skew-y-0 sm:-rotate-6 sm:rounded-3xl"></div>
-        <div className="relative px-4 py-10 bg-white shadow-lg sm:rounded-3xl sm:p-20">
-          <h1 className="text-3xl font-bold mb-6 text-center text-gray-800">
-            WhatsApp Integration Management
-          </h1>
+        <Card
+          elevation={0}
+          sx={{
+            bgcolor: grey[100],
+            borderRadius: 5,
+          }}
+        >
+          <CardContent
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <Box display={"flex"} gap={2} alignItems={"center"}>
+              <Typography variant="h6" fontWeight={700}>
+                Status:{" "}
+              </Typography>
+              <Chip
+                label={isLoggedIn ? "Connected" : "Not Connected"}
+                color={isLoggedIn ? "success" : "error"}
+                size="small"
+              />
+            </Box>
+            <Box>
+              <Tooltip title="Check Status">
+                <IconButton onClick={checkApiStatus} color="primary">
+                  <RefreshIcon />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Login">
+                <IconButton onClick={login} color="success">
+                  <LoginIcon />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Logout">
+                <IconButton onClick={logout} color="error">
+                  <LogoutIcon />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Reload">
+                <IconButton onClick={restart} color="warning">
+                  <ReplayIcon />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Get Screenshot">
+                <IconButton onClick={getScreenshot} color="secondary">
+                  <CameraAltIcon />
+                </IconButton>
+              </Tooltip>
+            </Box>
+          </CardContent>
+        </Card>
 
-          <div className="mb-6 bg-gray-100 p-4 rounded-lg">
-            <p className="font-semibold text-lg">
-              Status:{" "}
-              <span className={isLoggedIn ? "text-green-600" : "text-red-600"}>
-                {isLoggedIn ? "Connected" : "Not Connected"}
-              </span>
-            </p>
-          </div>
+        <Grid container spacing={2}>
+          {Object.entries(stats).map(([key, value]) => (
+            <Grid item xs={6} sm={3} key={key}>
+              <Card
+                elevation={0}
+                sx={{
+                  textAlign: "center",
+                  height: "100%",
+                  bgcolor: grey[100],
+                  borderRadius: 5,
+                }}
+              >
+                <CardContent>
+                  <Typography variant="subtitle2" color="textSecondary">
+                    {key
+                      .replace(/([A-Z])/g, " $1")
+                      .replace(/^./, (str) => str.toUpperCase())}
+                  </Typography>
+                  <Typography variant="h5" fontWeight="bold">
+                    {value}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
 
-          {qrCode && (
-            <div className="mb-6">
+        {qrCode && (
+          <Box sx={{ mb: 3, display: "flex", justifyContent: "center" }}>
+            <Paper elevation={3} sx={{ p: 2 }}>
               <AutoReloadImage
                 src={`/api/${qrCode}`}
                 alt={"Whatsapp QR"}
-                className="mx-auto"
+                sx={{ maxWidth: "100%", height: "auto" }}
               />
-            </div>
-          )}
+            </Paper>
+          </Box>
+        )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-            <button
-              onClick={checkApiStatus}
-              className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 transition-colors"
+        <Grid2 container gap={3} sx={{ flex: 1, overflow: "hidden" }}>
+          <Grid2 xs={4}>
+            <Card sx={{ bgcolor: grey[100], borderRadius: 5 }} elevation={0}>
+              <CardContent>
+                <Typography variant="body1" fontWeight={500} sx={{ mb: 2 }}>
+                  Test Message
+                </Typography>
+                <form onSubmit={sendTestMessage}>
+                  <Stack gap={2}>
+                    <TextField
+                      fullWidth
+                      name="phoneNumber"
+                      label="Phone Number"
+                      variant="outlined"
+                      size="small"
+                    />
+                    <TextField
+                      fullWidth
+                      name="contactName"
+                      label="Contact Name"
+                      variant="outlined"
+                      size="small"
+                    />
+                    <TextField
+                      fullWidth
+                      name="message"
+                      label="Message"
+                      variant="outlined"
+                      size="small"
+                    />
+                    <Button
+                      fullWidth
+                      type="submit"
+                      variant="contained"
+                      color="primary"
+                      startIcon={<SendIcon />}
+                      size="large"
+                    >
+                      Send Test Message
+                    </Button>
+                  </Stack>
+                </form>
+              </CardContent>
+            </Card>
+          </Grid2>
+          <Grid2 xs sx={{ height: "100%" }}>
+            <Card
+              elevation={0}
+              sx={{
+                bgcolor: grey[100],
+                borderRadius: 5,
+                height: "100%",
+                display: "flex",
+                flexDirection: "column",
+              }}
             >
-              Check Status
-            </button>
-              <button
-              onClick={login}
-                type="submit"
-                className="bg-green-500 text-white p-2 rounded hover:bg-green-600 transition-colors"
+              <CardContent
+                sx={{
+                  flex: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                  overflow: "hidden"
+                }}
               >
-                Login
-              </button>
-            <form onSubmit={logout} className="contents">
-              <button
-                type="submit"
-                className="bg-red-500 text-white p-2 rounded hover:bg-red-600 transition-colors"
-              >
-                Logout
-              </button>
-            </form>
-            <form onSubmit={restart} className="contents">
-              <button
-                type="submit"
-                className="bg-yellow-500 text-white p-2 rounded hover:bg-yellow-600 transition-colors"
-              >
-                Reload
-              </button>
-            </form>
-            <button
-              onClick={getScreenshot}
-              className="bg-indigo-500 text-white p-2 rounded hover:bg-indigo-600 transition-colors"
-            >
-              Get Screenshot
-            </button>
-          </div>
-
-          <form onSubmit={sendTestMessage} className="mb-6">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-2">
-              <input
-                type="text"
-                name="phoneNumber"
-                placeholder="Phone Number"
-                className="border rounded p-2"
-              />
-              <input
-                type="text"
-                name="contactName"
-                placeholder="Contact Name"
-                className="border rounded p-2"
-              />
-              <input
-                type="text"
-                name="message"
-                placeholder="Message"
-                className="border rounded p-2"
-              />
-            </div>
-            <button
-              type="submit"
-              className="bg-purple-500 text-white p-2 rounded hover:bg-purple-600 transition-colors w-full"
-            >
-              Send Test Message
-            </button>
-          </form>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-            <div className="border p-4 rounded bg-white shadow">
-              <p className="text-gray-600">Messages Today</p>
-              <p className="font-bold text-2xl">{stats.messagesToday}</p>
-            </div>
-            <div className="border p-4 rounded bg-white shadow">
-              <p className="text-gray-600">Messages This Month</p>
-              <p className="font-bold text-2xl">{stats.messagesThisMonth}</p>
-            </div>
-            <div className="border p-4 rounded bg-white shadow">
-              <p className="text-gray-600">Send Rate</p>
-              <p className="font-bold text-2xl">{stats.sendRate}%</p>
-            </div>
-            <div className="border p-4 rounded bg-white shadow">
-              <p className="text-gray-600">Failed Messages</p>
-              <p className="font-bold text-2xl">{stats.failedMessages}</p>
-            </div>
-          </div>
-
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold mb-4">Failed Messages</h2>
-            {failedMessages.length > 0 ? (
-              <div>
-                <ul className="mb-4 max-h-60 overflow-y-auto">
-                  {failedMessages.map((msg, index) => (
-                    <li key={index} className="mb-2 p-2 bg-red-100 rounded">
-                      <p>
-                        <strong>To:</strong> {msg.userId.name} (
-                        {msg.userId.phone})
-                      </p>
-                      <p>
-                        <strong>Message:</strong> {msg.message}
-                      </p>
-                      {msg.error && (
-                        <p>
-                          <strong>Error:</strong> {msg.error}
-                        </p>
-                      )}
-                      {msg.screen && (
-                        <p>
-                          <a
-                            target="_blank"
-                            href={
-                              `/whatsapp/errors` +
-                              msg.screen
-                            }
-                            className=" text-blue-900 font-bold"
-                          >
-                            preview
-                          </a>
-                        </p>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-                <form onSubmit={retryFailedMessages}>
-                  <button
-                    type="submit"
-                    className="bg-orange-500 text-white p-2 rounded hover:bg-orange-600 transition-colors w-full"
+                <Box display={"flex"} sx={{pb:1}}>
+                  <Typography variant="h6" gutterBottom>
+                    Failed Messages
+                  </Typography>
+                  <Box flex={1} />
+                  <Button
+                    variant="contained"
+                    color="secondary"
+                    onClick={retryFailedMessages}
+                    startIcon={<RefreshIcon />}
+                    size="small"
                   >
                     Retry Failed Messages
-                  </button>
-                </form>
-              </div>
-            ) : (
-              <p>No failed messages</p>
-            )}
-          </div>
+                  </Button>
+                </Box>
+                {failedMessages.length > 0 ? (
+                  <>
+                    <List sx={{ flex: 1, overflow: "auto" }}>
+                      {failedMessages.map((msg, index) => (
+                        <ListItem
+                          key={index}
+                          sx={{
+                            bgcolor: "error.light",
+                            mb: 1,
+                            borderRadius: 1,
+                            flexDirection: "column",
+                            alignItems: "flex-start",
+                          }}
+                        >
+                          <ListItemText
+                            primary={
+                              <Typography variant="subtitle1">
+                                To: {msg.userId.name} ({msg.userId.phone})
+                              </Typography>
+                            }
+                            secondary={
+                              <>
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                >
+                                  Message: {msg.message}
+                                </Typography>
+                                {msg.error && (
+                                  <Typography variant="body2" color="error">
+                                    Error: {msg.error}
+                                  </Typography>
+                                )}
+                              </>
+                            }
+                          />
+                          {msg.screen && (
+                            <Button
+                              href={`/whatsapp/errors${msg.screen}`}
+                              target="_blank"
+                              size="small"
+                              variant="outlined"
+                              startIcon={<ErrorIcon />}
+                              sx={{ mt: 1 }}
+                            >
+                              Preview Error
+                            </Button>
+                          )}
+                        </ListItem>
+                      ))}
+                    </List>
+                  </>
+                ) : (
+                  <Typography align="center" color="textSecondary">
+                    No failed messages
+                  </Typography>
+                )}
+              </CardContent>
+            </Card>
+          </Grid2>
+        </Grid2>
 
-          {error && <p className="text-red-500 mt-4">{error}</p>}
-        </div>
-      </div>
-    </div>
+        {error && (
+          <Typography color="error" sx={{ mt: 2 }}>
+            {error}
+          </Typography>
+        )}
+      </Stack>
+    </Box>
   );
 }

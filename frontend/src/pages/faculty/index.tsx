@@ -1,57 +1,266 @@
 import React, { useEffect, useState } from "react";
 import { Link, Outlet } from "react-router-dom";
 import { handleFetch } from "../../utils/handleFetch";
-import { Search, Plus, Eye, Edit, Trash2 } from "lucide-react";
-import StudentsTable from "../../components/StudentsTable";
-import FacultyTable from "../../components/FacultyTable";
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  CircularProgress,
+  FormControl,
+  InputAdornment,
+  OutlinedInput,
+  Stack,
+  Typography,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  IconButton,
+} from "@mui/material";
+import { Search, Add, Edit, Delete, Visibility } from "@mui/icons-material";
+import { grey } from "@mui/material/colors";
+import ModalButton from "../../components/ModalForm";
+import DynamicForm from "../../components/DynamicForm";
 
-export default function useres() {
-  const [loading, setLoading] = useState<boolean>(false);
-  const [data, setData] = useState<{users: any[]}>({users: []});
-  const [searchTerm, setSearchTerm] = useState<string>("");
+const Faculty = () => {
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState({ users: [] });
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const fetchFaculty = () =>
+    handleFetch("/users?role=faculty", setLoading, setData, console.log);
 
   useEffect(() => {
-    handleFetch("/users?role=faculty", setLoading, setData, console.log);
+    fetchFaculty();
   }, []);
 
   const filteredUsers = data.users.filter((user) =>
     user.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
+  console.log(data);
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-8">Faculty</h1>
-        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-          <div className="flex flex-col md:flex-row md:items-center mb-4 md:mb-0">
-            <div className="relative flex-grow mb-4 md:mb-0 md:mr-4">
-              <input
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Search useres..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-              <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
-            </div>
-            <Link
-              to="/faculty/new"
-              className="inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300"
-            >
-              <Plus size={20} className="mr-2" />
-              Create user
-            </Link>
-          </div>
-        </div>
-        
-        {loading && (
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading useres...</p>
-          </div>
-        ) }
-        {filteredUsers && <FacultyTable faculty={filteredUsers} />}
-      </div>
-      <Outlet />
-    </div>
+    <Stack
+      sx={{ overflow: "hidden", height: "100%", flexFlow: "column" }}
+      gap={2}
+    >
+      <Box display={"flex"} justifyContent="space-between" alignItems="center">
+        <Typography variant="h5" fontWeight={600}>
+          Facultys
+        </Typography>
+        <ModalButton
+          modal={
+            <DynamicForm
+              fields={[
+                { type: "text", name: "name", label: "Full Name" },
+                { type: "text", name: "phone", label: "Phone No." },
+                { type: "text", name: "cardUid", label: "Card UID" },
+                {
+                  type: "optionSelector",
+                  required: true,
+                  name: "role",
+                  label: "User Type",
+                  options: [
+                    {
+                      value: "Faculty",
+                      name: "Faculty",
+                    },
+                    {
+                      value: "faculty",
+                      name: "Faculty",
+                    },
+                  ],
+                  defaultValue: "faculty",
+                  readOnly: true,
+                },
+                {
+                  type: "targetSelector",
+                  label: "Select Batch",
+                  selectOnly: "batchIds",
+                  name: "target",
+                },
+              ]}
+            />
+          }
+          path={`/new`}
+          url={`/users`}
+          title="New Faculty"
+          button="Create"
+          onSuccess={fetchFaculty}
+          success="Created new Faculty successfully!"
+        >
+          <Button variant="contained" size="small">
+            <Add /> New Faculty
+          </Button>
+        </ModalButton>
+      </Box>
+      <Card elevation={0} sx={{ borderRadius: 5, bgcolor: grey[100] }}>
+        <CardContent sx={{ display: "flex", flexFlow: "column", gap: 3 }}>
+          <FormControl fullWidth>
+            <OutlinedInput
+              placeholder="Search Facultys..."
+              sx={{ borderRadius: 2.5, bgcolor: "white" }}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              startAdornment={
+                <InputAdornment position="start">
+                  <Search />
+                </InputAdornment>
+              }
+            />
+          </FormControl>
+          <Box>
+            {loading ? (
+              <Box
+                display="flex"
+                justifyContent="center"
+                alignItems="center"
+                py={8}
+              >
+                <CircularProgress />
+              </Box>
+            ) : filteredUsers.length > 0 ? (
+              <TableContainer component={Paper}>
+                <Table sx={{ minWidth: 650 }} aria-label="Facultys table">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Name</TableCell>
+                      <TableCell>Phone</TableCell>
+                      <TableCell>Batch</TableCell>
+                      <TableCell>Card UID</TableCell>
+                      <TableCell>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredUsers.map((user) => (
+                      <TableRow
+                        key={user.id}
+                        sx={{
+                          "&:last-child td, &:last-child th": { border: 0 },
+                        }}
+                      >
+                        <TableCell component="th" scope="row">
+                          {user.name}
+                        </TableCell>
+                        <TableCell>{user.phone}</TableCell>
+                        <TableCell>{user.cardUid}</TableCell>
+                        <TableCell>
+                          {user.batchIds?.map((user: any) => (
+                            <>
+                              {user.name} <br />
+                            </>
+                          ))}
+                        </TableCell>
+                        <TableCell sx={{ display: "flex" }}>
+                          <IconButton
+                            component={Link}
+                            to={`/user/${user._id}`}
+                            size="small"
+                          >
+                            <Visibility />
+                          </IconButton>
+                          <ModalButton
+                            modal={
+                              <DynamicForm
+                                fields={[
+                                  {
+                                    type: "text",
+                                    name: "name",
+                                    label: "Full Name",
+                                    defaultValue: user.name,
+                                  },
+                                  {
+                                    type: "text",
+                                    name: "phone",
+                                    label: "Phone No.",
+                                    defaultValue: user.phone,
+                                  },
+                                  {
+                                    type: "text",
+                                    name: "cardUid",
+                                    label: "Card UID",
+                                    defaultValue: user.cardUid,
+                                  },
+                                  {
+                                    type: "optionSelector",
+                                    required: true,
+                                    name: "role",
+                                    label: "User Type",
+                                    options: [
+                                      {
+                                        value: "student",
+                                        name: "Student",
+                                      },
+                                      {
+                                        value: "faculty",
+                                        name: "Faculty",
+                                      },
+                                    ],
+                                    defaultValue: "faculty",
+                                    readOnly: true,
+                                  },
+                                  {
+                                    type: "targetSelector",
+                                    label: "Select Batch",
+                                    selectOnly: "batchIds",
+                                    name: "target",
+                                    defaultValue: {
+                                      type: "batchIds",
+                                      ids: user.batchIds?.map(
+                                        (user: any) => user._id
+                                      ),
+                                    },
+                                  },
+                                ]}
+                              />
+                            }
+                            path={`/${user._id}/edit`}
+                            url={`/users/${user._id}/edit`}
+                            title="Edit Faculty"
+                            button="Save"
+                            onSuccess={fetchFaculty}
+                            success="Edited Faculty successfully!"
+                          >
+                            <IconButton>
+                              <Edit />
+                            </IconButton>
+                          </ModalButton>
+                          <ModalButton
+                            modal={
+                              <Typography>
+                                Are you sure you want to delete this?
+                              </Typography>
+                            }
+                            path={`/${user._id}/delete`}
+                            url={`/users/${user._id}/delete`}
+                            title="Delete Facultys"
+                            button="Delete"
+                            onSuccess={fetchFaculty}
+                            success="Deleted the User Successfully!"
+                          >
+                            <IconButton>
+                              <Delete />
+                            </IconButton>
+                          </ModalButton>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            ) : (
+              <Typography variant="body1" textAlign="center" py={4}>
+                No Facultys found.
+              </Typography>
+            )}
+          </Box>
+        </CardContent>
+      </Card>
+    </Stack>
   );
-}
+};
+
+export default Faculty;

@@ -1,52 +1,132 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { handleFetch } from '../../utils/handleFetch';
+import React, { useState, useEffect } from "react";
+import { useParams, Link, useLocation } from "react-router-dom";
+import { handleFetch } from "../../utils/handleFetch";
+import {
+  Container,
+  Typography,
+  Paper,
+  Box,
+  List,
+  ListItem,
+  ListItemText,
+  Button,
+  CircularProgress,
+  Divider,
+  Grid,
+  Card,
+  CardContent,
+  Stack,
+} from "@mui/material";
+import { ArrowBack } from "@mui/icons-material";
+import { grey } from "@mui/material/colors";
+import Grid2 from "@mui/material/Unstable_Grid2/Grid2";
 
 export function ViewSingleScore() {
-    const [score, setScore] = useState<any>(null);
-    const [loading, setLoading] = useState(false);
-    const { id } = useParams();
+  const [score, setScore] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const { pathname } = useLocation();
+  const id = pathname.split("/")[2];
 
-    useEffect(() => {
-        handleFetch(`/scores/${id}`, setLoading, setScore, console.error);
-    }, [id]);
+  useEffect(() => {
+    if (id) handleFetch(`/scores/${id}`, setLoading, setScore, console.error);
+  }, [id]);
 
-    if (loading) return <div>Loading...</div>;
-    if (!score) return <div>Score not found</div>;
-
-    return (
-        <div className="container mx-auto px-4 py-8">
-            <h1 className="text-3xl font-bold mb-4">{score.title}</h1>
-            <div className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-                <div className="mb-4">
-                    <strong className="block text-gray-700 text-sm font-bold mb-2">Date:</strong>
-                    {new Date(score.date).toLocaleDateString()}
-                </div>
-                <div className="mb-4">
-                    <strong className="block text-gray-700 text-sm font-bold mb-2">Subject:</strong>
-                    {score.subject}
-                </div>
-                <div className="mb-4">
-                    <strong className="block text-gray-700 text-sm font-bold mb-2">Total Marks:</strong>
-                    {score.total}
-                </div>
-                <div className="mb-4">
-                    <strong className="block text-gray-700 text-sm font-bold mb-2">Batch:</strong>
-                    {score.batchIds?.map((batch: any) => batch.name).join(', ')}
-                </div>
-                <div className="mb-4">
-                    <strong className="block text-gray-700 text-sm font-bold mb-2">Student Scores:</strong>
-                    <ul>
-                        {score.obtained.map((item: any) => (
-                            <li key={item.studentId}>
-                                {item.studentId.name}: {item.marks} marks
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            </div>
-            <Link to={`/scores/${id}/edit`} className="bg-blue-500 text-white px-4 py-2 rounded mr-2">Edit</Link>
-            <Link to="/scores" className="bg-gray-500 text-white px-4 py-2 rounded">Back to All Scores</Link>
-        </div>
-    );
+  return (
+    <Stack gap={2} sx={{ maxHeight: "50vh", minWidth: "25rem" }}>
+      {loading && (
+        <Box display="flex" justifyContent="center" alignItems="center">
+          <CircularProgress />
+        </Box>
+      )}
+      {!score ? (
+        <Box
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          minHeight="100vh"
+        >
+          <Typography variant="h5">Score not found</Typography>
+        </Box>
+      ) : (
+        <React.Fragment>
+          <Grid container spacing={2} sx={{ textAlign: "center" }}>
+            <Grid item xs={12} sm={6}>
+              <Card
+                elevation={0}
+                sx={{ bgcolor: grey[100], py: 1.5, borderRadius: 5 }}
+              >
+                <Typography variant="subtitle1" fontWeight="bold">
+                  Date:
+                </Typography>
+                <Typography>
+                  {new Date(score.date).toLocaleDateString()}
+                </Typography>
+              </Card>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Card
+                elevation={0}
+                sx={{ bgcolor: grey[100], py: 1.5, borderRadius: 5 }}
+              >
+                <Typography variant="subtitle1" fontWeight="bold">
+                  Subject:
+                </Typography>
+                <Typography>{score.subject}</Typography>
+              </Card>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Card
+                elevation={0}
+                sx={{ bgcolor: grey[100], py: 1.5, borderRadius: 5 }}
+              >
+                <Typography variant="subtitle1" fontWeight="bold">
+                  Total Marks:
+                </Typography>
+                <Typography>{score.total}</Typography>
+              </Card>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Card
+                elevation={0}
+                sx={{ bgcolor: grey[100], py: 1.5, borderRadius: 5 }}
+              >
+                <Typography variant="subtitle1" fontWeight="bold">
+                  Batch:
+                </Typography>
+                <Typography>
+                  {score.batchIds?.map((batch: any) => batch.name).join(", ")}
+                </Typography>
+              </Card>
+            </Grid>
+          </Grid>
+          <Typography variant="h6" fontWeight={600}>
+            Student Scores
+          </Typography>
+          <Box>
+            <Grid2 container spacing={2}>
+              {score.obtained.map((item: any) => (
+                <Grid2 xs={6}>
+                  <Card
+                    elevation={0}
+                    key={item.studentId}
+                    sx={{
+                      textAlign: "center",
+                      bgcolor: grey[100],
+                      p: 1,
+                      borderRadius: 5,
+                    }}
+                  >
+                    <Typography fontWeight={500}>
+                      {item.studentId.name}
+                    </Typography>
+                    <Typography fontWeight={600}>{`${item.marks}`}</Typography>
+                  </Card>
+                </Grid2>
+              ))}
+            </Grid2>
+          </Box>
+        </React.Fragment>
+      )}
+    </Stack>
+  );
 }

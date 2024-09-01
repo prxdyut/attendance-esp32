@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
-import { handleFetch } from "../../utils/handleFetch";
-import { format, subDays, parseISO } from "date-fns";
-import { TargetSelector } from "../../components/SelectTarget";
+import React, { useState, useEffect } from 'react';
+import { handleFetch } from '../../utils/handleFetch';
+import { format, subDays, parseISO } from 'date-fns';
+import { TargetSelector } from '../../components/SelectTarget';
 import {
   Box,
   Button,
@@ -20,21 +20,26 @@ import {
   TableHead,
   TableRow,
   Typography,
-} from "@mui/material";
-import { Search } from "@mui/icons-material";
-import { grey } from "@mui/material/colors";
-import { DateRangeSelector } from "../../components/DateRangeSelector";
+} from '@mui/material';
+import { Search } from '@mui/icons-material';
+import { grey } from '@mui/material/colors';
+import { DateRangeSelector } from '../../components/DateRangeSelector';
 
-export function Presentees() {
+interface HolidayItem {
+  name: string;
+  date: string;
+}
+
+export function HolidayFor() {
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectionType, setSelectionType] = useState("all");
-  const [selectedIds, setSelectedIds] = useState([]);
+  const [data, setData] = useState<HolidayItem[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectionType, setSelectionType] = useState('all');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const dateRangeState = useState<[string, string]>([
-    format(subDays(new Date(), 1), "yyyy-MM-dd"),
-    format(new Date(), "yyyy-MM-dd"),
+    format(subDays(new Date(), 1), 'yyyy-MM-dd'),
+    format(new Date(), 'yyyy-MM-dd'),
   ]);
   const [dateRange] = dateRangeState;
 
@@ -43,45 +48,46 @@ export function Presentees() {
       startDate: dateRange[0],
       endDate: dateRange[1],
       selectionType,
-      selectedIds: selectedIds.join(","),
+      selectedIds: selectedIds.join(','),
     });
 
     handleFetch(
-      `/attendance/presentees?${queryParams}`,
+      `/statistics/holidayFor?${queryParams}`,
       setLoading,
-      (data: any) => setData(data.presentees),
+      (data: { holidayFor: HolidayItem[] }) => {
+        console.log('Holiday For : ', data.holidayFor);
+        setData(data.holidayFor);
+      },
       console.error
     );
   }, [dateRange, selectionType, selectedIds]);
 
-  const handleSelectionChange = (newType: any, newIds: any) => {
+  const handleSelectionChange = (newType: string, newIds: string[]) => {
     setSelectionType(newType);
     setSelectedIds(newIds);
   };
 
-  const filteredData = data.filter((item: any) =>
+  const filteredData = data.filter((item) =>
     item.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  console.log(data);
-
   return (
     <Stack
-      sx={{ overflow: "hidden", height: "100%", flexFlow: "column" }}
+      sx={{ overflow: 'hidden', height: '100%', flexFlow: 'column' }}
       gap={2}
     >
-      <Box display={"flex"}>
+      <Box display={'flex'}>
         <Typography variant="h5" fontWeight={600}>
-          Presentees
+          Holiday Data
         </Typography>
       </Box>
       <Card elevation={0} sx={{ borderRadius: 5, bgcolor: grey[100] }}>
-        <CardContent sx={{ display: "flex", flexFlow: "column", gap: 3 }}>
-          <Box display={"flex"} gap={3}>
+        <CardContent sx={{ display: 'flex', flexFlow: 'column', gap: 3 }}>
+          <Box display={'flex'} gap={3}>
             <FormControl fullWidth>
               <OutlinedInput
                 placeholder="Search students..."
-                sx={{ borderRadius: 2.5, bgcolor: "white" }}
+                sx={{ borderRadius: 2.5, bgcolor: 'white' }}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 startAdornment={
@@ -115,18 +121,14 @@ export function Presentees() {
                     <TableRow>
                       <TableCell>Name</TableCell>
                       <TableCell>Date</TableCell>
-                      <TableCell>Punch Time</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {filteredData.map((item: any, index: number) => (
+                    {filteredData.map((item, index) => (
                       <TableRow key={index}>
                         <TableCell>{item.name}</TableCell>
                         <TableCell>
-                          {format(parseISO(item.date), "dd MMM yyyy")}
-                        </TableCell>
-                        <TableCell>
-                          {item.punchTimes.map((time: any) => format(parseISO(time), "hh:mm a")).join(', ') }
+                          {format(parseISO(item.date), 'do MMMM yyyy')}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -135,7 +137,7 @@ export function Presentees() {
               </TableContainer>
             ) : (
               <Typography variant="body1" textAlign="center" py={4}>
-                No presentees found.
+                No holidays found.
               </Typography>
             )}
           </Box>

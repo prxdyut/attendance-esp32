@@ -1,70 +1,417 @@
 import React, { useEffect, useState } from "react";
-import { Link, Outlet, useParams, useSearchParams } from "react-router-dom";
+import { Link, Outlet, useLocation } from "react-router-dom";
 import { handleFetch } from "../../utils/handleFetch";
-import { Search, Plus, Eye, Edit, Trash2 } from "lucide-react";
-import StudentsTable from "../../components/StudentsTable";
-import FacultyTable from "../../components/FacultyTable";
+import {
+  Box,
+  Container,
+  Typography,
+  Paper,
+  InputBase,
+  Button,
+  CircularProgress,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  IconButton,
+  Stack,
+  Card,
+  FormControl,
+  OutlinedInput,
+  InputAdornment,
+  CardContent,
+} from "@mui/material";
+import {
+  Search,
+  Add,
+  Visibility,
+  Edit,
+  Delete,
+  Remove,
+} from "@mui/icons-material";
+import { grey } from "@mui/material/colors";
+import ModalButton from "../../components/ModalForm";
+import DynamicForm from "../../components/DynamicForm";
 
 export default function BatchSingle() {
   const [loading, setLoading] = useState<boolean>(false);
   const [data, setData] = useState<any>({ students: [], faculty: [] });
   const [searchTerm, setSearchTerm] = useState<string>("");
-  const params = useParams()
-
+  const { pathname } = useLocation();
+  const id = pathname.split("/")[2];
+  const fetchData = () =>
+    handleFetch("/batches/" + id, setLoading, setData, console.log);
   useEffect(() => {
-    handleFetch("/batches/" + params.id, setLoading, setData, console.log);
-  }, []);
+    if (id) fetchData();
+  }, [id]);
 
-  const filteredStudents = data?.students?.filter((student: any) =>
-    student.name.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  const filteredStudents =
+    data?.students?.filter((student: any) =>
+      student.name.toLowerCase().includes(searchTerm.toLowerCase())
+    ) || [];
 
-  const filteredFaculty = data?.faculty?.filter((student: any) =>
-    student.name.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  const filteredFaculty =
+    data?.faculty?.filter((faculty: any) =>
+      faculty.name.toLowerCase().includes(searchTerm.toLowerCase())
+    ) || [];
 
+  const users = [
+    ...data?.faculty?.map((user: any) => user._id),
+    ...data?.students?.map((user: any) => user._id),
+  ];
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-8">
-          <Link to={"/batches"} className=" opacity-50 hover:opacity-100">Batches</Link>
-          {' > '}
-          {data?.batch?.name}
-        </h1>
-
-        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-          <div className="flex flex-col md:flex-row md:items-center mb-4 md:mb-0">
-            <div className="relative flex-grow mb-4 md:mb-0 md:mr-4">
-              <input
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Search"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+    <Stack
+      sx={{ overflow: "hidden", height: "100%", flexFlow: "column" }}
+      gap={2}
+    >
+      <Box display={"flex"} justifyContent="space-between" alignItems="center">
+        <Typography variant="h5" fontWeight={600}>
+          Batches {">"} {data?.batch?.name}
+        </Typography>
+        <Box flex={1} />
+        <ModalButton
+          modal={
+            <Box sx={{ m: 0 }}>
+              <DynamicForm
+                key={String(users.length)}
+                fields={[
+                  {
+                    type: "text",
+                    name: "name",
+                    label: "Batch Name",
+                    defaultValue: data?.batch?.name,
+                  },
+                  {
+                    type: "targetSelector",
+                    label: "Select Target",
+                    name: "target",
+                    noPrompt: true,
+                    selectOnly: "userIds",
+                    defaultValue: {
+                      type: "userIds",
+                      ids: users,
+                    },
+                  },
+                ]}
               />
-              <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
-            </div>
-            <Link
-              to="/batches/new"
-              className="inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300"
+            </Box>
+          }
+          path={`/${data?.batch?._id}/edit/users`}
+          url={`/batches/${data?.batch?._id}/edit`}
+          title="Edit Users"
+          button="Create"
+          onSuccess={fetchData}
+          success="Edited the Batch successfully!"
+        >
+          <Button variant="contained" size="small" startIcon={<Edit />}>
+            Edit Batch
+          </Button>
+        </ModalButton>
+      </Box>
+      <Card elevation={0} sx={{ borderRadius: 5, bgcolor: grey[100] }}>
+        <CardContent sx={{ display: "flex", flexFlow: "column", gap: 3 }}>
+          <FormControl fullWidth>
+            <OutlinedInput
+              placeholder="Search batches..."
+              sx={{ borderRadius: 2.5, bgcolor: "white" }}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              startAdornment={
+                <InputAdornment position="start">
+                  <Search />
+                </InputAdornment>
+              }
+            />
+          </FormControl>
+          {loading ? (
+            <Box
+              display="flex"
+              justifyContent="center"
+              alignItems="center"
+              py={8}
             >
-              <Plus size={20} className="mr-2" />
-              Create Batch
-            </Link>
-          </div>
-        </div>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {/* Faculty Table */}
+              <TableContainer
+                component={Paper}
+                elevation={0}
+                sx={{ borderRadius: 2 }}
+              >
+                <Typography variant="body1" sx={{ px: 2, py: 1 }}>
+                  Faculty
+                </Typography>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Name</TableCell>
+                      <TableCell>Email</TableCell>
+                      <TableCell>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredFaculty.map((faculty: any) => (
+                      <TableRow key={faculty.id}>
+                        <TableCell>{faculty.name}</TableCell>
+                        <TableCell>{faculty.email}</TableCell>
+                        <TableCell sx={{ display: "flex" }}>
+                          <IconButton
+                            component={Link}
+                            to={`/user/${faculty._id}`}
+                            size="small"
+                          >
+                            <Visibility />
+                          </IconButton>
+                          <ModalButton
+                            modal={
+                              <DynamicForm
+                                fields={[
+                                  {
+                                    type: "text",
+                                    name: "name",
+                                    label: "Full Name",
+                                    defaultValue: faculty.name,
+                                  },
+                                  {
+                                    type: "text",
+                                    name: "phone",
+                                    label: "Phone No.",
+                                    defaultValue: faculty.phone,
+                                  },
+                                  {
+                                    type: "text",
+                                    name: "cardUid",
+                                    label: "Card UID",
+                                    defaultValue: faculty.cardUid,
+                                  },
+                                  {
+                                    type: "optionSelector",
+                                    required: true,
+                                    name: "role",
+                                    label: "User Type",
+                                    options: [
+                                      {
+                                        value: "student",
+                                        name: "Student",
+                                      },
+                                      {
+                                        value: "faculty",
+                                        name: "Faculty",
+                                      },
+                                    ],
+                                    defaultValue: "faculty",
+                                    readOnly: true,
+                                  },
+                                  {
+                                    type: "targetSelector",
+                                    label: "Select Batch",
+                                    selectOnly: "batchIds",
+                                    name: "target",
+                                    defaultValue: {
+                                      type: "batchIds",
+                                      ids: faculty.batchIds?.map(
+                                        (user: any) => user._id
+                                      ),
+                                    },
+                                  },
+                                ]}
+                              />
+                            }
+                            path={`/${id}/${faculty._id}/edit`}
+                            url={`/users/${faculty._id}/edit`}
+                            title="Edit Faculty"
+                            button="Save"
+                            onSuccess={fetchData}
+                            success="Edited Faculty successfully!"
+                          >
+                            <IconButton>
+                              <Edit />
+                            </IconButton>
+                          </ModalButton>
+                          <ModalButton
+                            modal={
+                              <Typography>
+                                Are you sure you want to remove from this batch?
+                              </Typography>
+                            }
+                            path={`/${id}/${faculty._id}/remove`}
+                            url={`/users/${faculty._id}/${id}/remove`}
+                            title="Remove Faculty"
+                            button="Remove"
+                            onSuccess={fetchData}
+                            success="removed Faculty successfully!"
+                          >
+                            <IconButton>
+                              <Remove />
+                            </IconButton>
+                          </ModalButton>
+                          <ModalButton
+                            modal={
+                              <Typography>
+                                Are you sure you want to delete this User?
+                              </Typography>
+                            }
+                            path={`/${id}/${faculty._id}/delete`}
+                            url={`/users/${faculty._id}/delete`}
+                            title="Delete Faculty"
+                            button="Delete"
+                            onSuccess={fetchData}
+                            success="Deleted the User Successfully!"
+                          >
+                            <IconButton>
+                              <Delete />
+                            </IconButton>
+                          </ModalButton>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
 
-        {loading && (
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading Students and Teachers...</p>
-          </div>
-        )}
-        <div className=" flex flex-col gap-4">
-        <FacultyTable faculty={filteredFaculty} />
-        <StudentsTable students={filteredStudents} />
-        </div>
-      </div>
-      <Outlet />
-    </div>
+              {/* Students Table */}
+              <TableContainer
+                elevation={0}
+                component={Paper}
+                sx={{ borderRadius: 2 }}
+              >
+                <Typography variant="body1" sx={{ px: 2, py: 1 }}>
+                  Students
+                </Typography>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Name</TableCell>
+                      <TableCell>Email</TableCell>
+                      <TableCell>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredStudents.map((student: any) => (
+                      <TableRow key={student.id}>
+                        <TableCell>{student.name}</TableCell>
+                        <TableCell>{student.email}</TableCell>
+                        <TableCell sx={{ display: "flex" }}>
+                          <IconButton
+                            component={Link}
+                            to={`/user/${student._id}`}
+                            size="small"
+                          >
+                            <Visibility />
+                          </IconButton>
+                          <ModalButton
+                            modal={
+                              <DynamicForm
+                                fields={[
+                                  {
+                                    type: "text",
+                                    name: "name",
+                                    label: "Full Name",
+                                    defaultValue: student.name,
+                                  },
+                                  {
+                                    type: "text",
+                                    name: "phone",
+                                    label: "Phone No.",
+                                    defaultValue: student.phone,
+                                  },
+                                  {
+                                    type: "text",
+                                    name: "cardUid",
+                                    label: "Card UID",
+                                    defaultValue: student.cardUid,
+                                  },
+                                  {
+                                    type: "optionSelector",
+                                    required: true,
+                                    name: "role",
+                                    label: "User Type",
+                                    options: [
+                                      {
+                                        value: "student",
+                                        name: "Student",
+                                      },
+                                      {
+                                        value: "faculty",
+                                        name: "Faculty",
+                                      },
+                                    ],
+                                    defaultValue: "student",
+                                    readOnly: true,
+                                  },
+                                  {
+                                    type: "targetSelector",
+                                    label: "Select Batch",
+                                    selectOnly: "batchIds",
+                                    name: "target",
+                                    single: true,
+                                    defaultValue: {
+                                      type: "batchIds",
+                                      ids: [student.batchIds[0]._id],
+                                    },
+                                  },
+                                ]}
+                              />
+                            }
+                            path={`/${id}/${student._id}/edit`}
+                            url={`/users/${student._id}/edit`}
+                            title="Edit Student"
+                            button="Save"
+                            onSuccess={fetchData}
+                            success="Edited Student successfully!"
+                          >
+                            <IconButton>
+                              <Edit />
+                            </IconButton>
+                          </ModalButton>
+                          <ModalButton
+                            modal={
+                              <Typography>
+                                Are you sure you want to remove from this batch?
+                              </Typography>
+                            }
+                            path={`/${id}/${student._id}/remove`}
+                            url={`/users/${student._id}/${id}/remove`}
+                            title="Remove Student"
+                            button="Remove"
+                            onSuccess={fetchData}
+                            success="removed Student successfully!"
+                          >
+                            <IconButton>
+                              <Remove />
+                            </IconButton>
+                          </ModalButton>
+                          <ModalButton
+                            modal={
+                              <Typography>
+                                Are you sure you want to delete this User?
+                              </Typography>
+                            }
+                            path={`/${id}/${student._id}/delete`}
+                            url={`/users/${student._id}/delete`}
+                            title="Delete Student"
+                            button="Delete"
+                            onSuccess={fetchData}
+                            success="Deleted the User Successfully!"
+                          >
+                            <IconButton>
+                              <Delete />
+                            </IconButton>
+                          </ModalButton>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+          )}
+        </CardContent>
+      </Card>
+    </Stack>
   );
 }
