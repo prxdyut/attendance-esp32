@@ -2,14 +2,11 @@ import React, { useState, useEffect } from "react";
 import { handleSubmit } from "../utils/handleSubmit";
 import { handleFetch } from "../utils/handleFetch";
 import AutoReloadImage from "../components/AutoReloadingImage";
-import LoadingOverlay from "../components/LoadingOverlay";
 import {
   Box,
   Button,
   Card,
   CardContent,
-  CircularProgress,
-  Container,
   Grid,
   TextField,
   Typography,
@@ -20,7 +17,6 @@ import {
   Chip,
   Tooltip,
   IconButton,
-  Divider,
   Stack,
 } from "@mui/material";
 import {
@@ -293,146 +289,135 @@ export default function Whatsapp() {
           </Box>
         )}
 
-        <Grid2 container gap={3} sx={{ flex: 1, overflow: "hidden" }}>
-          <Grid2 xs={4}>
-            <Card sx={{ bgcolor: grey[100], borderRadius: 5 }} elevation={0}>
-              <CardContent>
-                <Typography variant="body1" fontWeight={500} sx={{ mb: 2 }}>
-                  Test Message
-                </Typography>
-                <form onSubmit={sendTestMessage}>
-                  <Stack gap={2}>
-                    <TextField
-                      fullWidth
-                      name="phoneNumber"
-                      label="Phone Number"
-                      variant="outlined"
-                      size="small"
-                    />
-                    <TextField
-                      fullWidth
-                      name="contactName"
-                      label="Contact Name"
-                      variant="outlined"
-                      size="small"
-                    />
-                    <TextField
-                      fullWidth
-                      name="message"
-                      label="Message"
-                      variant="outlined"
-                      size="small"
-                    />
-                    <Button
-                      fullWidth
-                      type="submit"
-                      variant="contained"
-                      color="primary"
-                      startIcon={<SendIcon />}
-                      size="large"
-                    >
-                      Send Test Message
-                    </Button>
-                  </Stack>
-                </form>
-              </CardContent>
-            </Card>
-          </Grid2>
-          <Grid2 xs sx={{ height: "100%" }}>
-            <Card
-              elevation={0}
-              sx={{
-                bgcolor: grey[100],
-                borderRadius: 5,
-                height: "100%",
-                display: "flex",
-                flexDirection: "column",
-              }}
-            >
-              <CardContent
-                sx={{
-                  flex: 1,
-                  display: "flex",
-                  flexDirection: "column",
-                  overflow: "hidden"
-                }}
+        <Card sx={{ bgcolor: grey[100], borderRadius: 5 }} elevation={0}>
+          <CardContent>
+            <Typography variant="body1" fontWeight={500} sx={{ mb: 2 }}>
+              Test Message
+            </Typography>
+            <form onSubmit={sendTestMessage}>
+              <Stack direction={"row"} gap={2}>
+                <TextField
+                  fullWidth
+                  name="phoneNumber"
+                  label="Phone Number"
+                  variant="outlined"
+                />
+                <TextField
+                  fullWidth
+                  name="contactName"
+                  label="Contact Name"
+                  variant="outlined"
+                />
+                <TextField
+                  fullWidth
+                  name="message"
+                  label="Message"
+                  variant="outlined"
+                />
+                <Button
+                  fullWidth
+                  type="submit"
+                  variant="contained"
+                  color="primary"
+                  startIcon={<SendIcon />}
+                  size="large"
+                  sx={{ width: "100%", px: 2 }}
+                >
+                  Send
+                </Button>
+              </Stack>
+            </form>
+          </CardContent>
+        </Card>
+        <Card
+          elevation={0}
+          sx={{
+            bgcolor: grey[100],
+            borderRadius: 5,
+            height: "100%",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <CardContent
+            sx={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            }}
+          >
+            <Box display={"flex"} sx={{ pb: 1 }}>
+              <Typography variant="h6" gutterBottom>
+                Failed Messages
+              </Typography>
+              <Box flex={1} />
+              <Button
+                variant="contained"
+                color="secondary"
+                onClick={retryFailedMessages}
+                startIcon={<RefreshIcon />}
+                size="small"
               >
-                <Box display={"flex"} sx={{pb:1}}>
-                  <Typography variant="h6" gutterBottom>
-                    Failed Messages
-                  </Typography>
-                  <Box flex={1} />
-                  <Button
-                    variant="contained"
-                    color="secondary"
-                    onClick={retryFailedMessages}
-                    startIcon={<RefreshIcon />}
-                    size="small"
-                  >
-                    Retry Failed Messages
-                  </Button>
-                </Box>
-                {failedMessages.length > 0 ? (
-                  <>
-                    <List sx={{ flex: 1, overflow: "auto" }}>
-                      {failedMessages.map((msg, index) => (
-                        <ListItem
-                          key={index}
-                          sx={{
-                            bgcolor: "error.light",
-                            mb: 1,
-                            borderRadius: 1,
-                            flexDirection: "column",
-                            alignItems: "flex-start",
-                          }}
-                        >
-                          <ListItemText
-                            primary={
-                              <Typography variant="subtitle1">
-                                To: {msg.userId.name} ({msg.userId.phone})
+                Retry Failed Messages
+              </Button>
+            </Box>
+            {failedMessages.length > 0 ? (
+              <>
+                <List sx={{ flex: 1, overflow: "auto" }}>
+                  {failedMessages.map((msg, index) => (
+                    <ListItem
+                      key={index}
+                      sx={{
+                        bgcolor: "error.light",
+                        mb: 1,
+                        borderRadius: 1,
+                        flexDirection: "column",
+                        alignItems: "flex-start",
+                      }}
+                    >
+                      <ListItemText
+                        primary={
+                          <Typography variant="subtitle1">
+                            To: {msg.userId.name} ({msg.userId.phone})
+                          </Typography>
+                        }
+                        secondary={
+                          <>
+                            <Typography variant="body2" color="text.secondary">
+                              Message: {msg.message}
+                            </Typography>
+                            {msg.error && (
+                              <Typography variant="body2" color="error">
+                                Error: {msg.error}
                               </Typography>
-                            }
-                            secondary={
-                              <>
-                                <Typography
-                                  variant="body2"
-                                  color="text.secondary"
-                                >
-                                  Message: {msg.message}
-                                </Typography>
-                                {msg.error && (
-                                  <Typography variant="body2" color="error">
-                                    Error: {msg.error}
-                                  </Typography>
-                                )}
-                              </>
-                            }
-                          />
-                          {msg.screen && (
-                            <Button
-                              href={`/whatsapp/errors${msg.screen}`}
-                              target="_blank"
-                              size="small"
-                              variant="outlined"
-                              startIcon={<ErrorIcon />}
-                              sx={{ mt: 1 }}
-                            >
-                              Preview Error
-                            </Button>
-                          )}
-                        </ListItem>
-                      ))}
-                    </List>
-                  </>
-                ) : (
-                  <Typography align="center" color="textSecondary">
-                    No failed messages
-                  </Typography>
-                )}
-              </CardContent>
-            </Card>
-          </Grid2>
-        </Grid2>
+                            )}
+                          </>
+                        }
+                      />
+                      {msg.screen && (
+                        <Button
+                          href={`/whatsapp/errors${msg.screen}`}
+                          target="_blank"
+                          size="small"
+                          variant="outlined"
+                          startIcon={<ErrorIcon />}
+                          sx={{ mt: 1 }}
+                        >
+                          Preview Error
+                        </Button>
+                      )}
+                    </ListItem>
+                  ))}
+                </List>
+              </>
+            ) : (
+              <Typography align="center" color="textSecondary">
+                No failed messages
+              </Typography>
+            )}
+          </CardContent>
+        </Card>
 
         {error && (
           <Typography color="error" sx={{ mt: 2 }}>

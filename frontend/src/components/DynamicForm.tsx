@@ -20,7 +20,7 @@ import {
 } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFnsV3";
 import { parse, parseISO } from "date-fns";
-import { useLocation } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
 import { handleFetch } from "../utils/handleFetch";
 import { grey } from "@mui/material/colors";
 import Grid2 from "@mui/material/Unstable_Grid2/Grid2";
@@ -67,6 +67,8 @@ const DynamicForm = ({
   fields: Fields;
   users?: { [x: string]: string };
 }) => {
+  const searchParams = new URL(location.href).searchParams;
+  
   const getValues = () => {
     let temp = new Map();
     for (const d of fields) {
@@ -79,13 +81,14 @@ const DynamicForm = ({
       }
     }
     if (users) temp.set("users", users);
-    return Object.fromEntries(temp);
+
+    return {...Object.fromEntries(searchParams), ...Object.fromEntries(temp)};
   };
 
   const [formData, setFormData] = useState<any>(getValues());
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [students, setStudents] = useState([]);
-
+  console.log(formData);
   const renderField = (field: Field) => {
     switch (field.type) {
       case "time":

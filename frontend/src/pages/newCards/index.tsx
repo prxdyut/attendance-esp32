@@ -22,10 +22,11 @@ import {
   Typography,
 } from "@mui/material";
 import { grey } from "@mui/material/colors";
-import { Add, Search } from "@mui/icons-material";
+import { Add, Person, School, Search } from "@mui/icons-material";
 import { DatePicker, LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFnsV3";
 import { DateRangeSelector } from "../../components/DateRangeSelector";
+import { Link } from "react-router-dom";
 
 export default function NewCards() {
   const [loading, setLoading] = useState(false);
@@ -74,12 +75,12 @@ export default function NewCards() {
         New Cards
       </Typography>
       <Card elevation={0} sx={{ borderRadius: 5, bgcolor: grey[100] }}>
-        <CardContent sx={{display: 'flex', flexFlow:'column', gap:3}}>
+        <CardContent sx={{ display: "flex", flexFlow: "column", gap: 3 }}>
           <Box display={"flex"} gap={3}>
             <FormControl fullWidth>
               <OutlinedInput
                 placeholder="Search New Cards"
-                sx={{ borderRadius: 2.5 , bgcolor: 'white'}}
+                sx={{ borderRadius: 2.5, bgcolor: "white" }}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 startAdornment={
@@ -126,14 +127,29 @@ export default function NewCards() {
                             {format(cardDate, "do MMMM yyyy")}
                           </TableCell>
                           <TableCell>{format(cardDate, "hh:mm a")}</TableCell>
-                          <TableCell>
+                          <TableCell sx={{ display: "flex", gap: 2 }}>
                             <Button
                               variant="contained"
-                              startIcon={<Add />}
-                              onClick={() => handleNewUser(card.uid)}
+                              startIcon={<Person />}
                               size="small"
+                              component={Link}
+                              to={
+                                "/students/new?autofill=true&cardUid=" +
+                                card.uid
+                              }
                             >
-                              New User
+                              New Student
+                            </Button>
+                            <Button
+                              variant="contained"
+                              startIcon={<School />}
+                              size="small"
+                              component={Link}
+                              to={
+                                "/faculty/new?autofill=true&cardUid=" + card.uid
+                              }
+                            >
+                              New Faculty
                             </Button>
                           </TableCell>
                         </TableRow>
