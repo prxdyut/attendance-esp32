@@ -2,11 +2,14 @@ import { Outlet } from "react-router-dom";
 import SideBar from "./SideBar";
 import Topbar from "./Topbar";
 import { Box, Container } from "@mui/material";
+import { useState } from "react";
 
 export default function Layout() {
+  const openState = useState<boolean>(false);
+
   return (
     <Box sx={{ display: "flex" }}>
-      <SideBar />
+      <SideBar openState={openState} />
       <Box
         sx={{
           height: "100vh",
@@ -15,8 +18,8 @@ export default function Layout() {
           flexFlow: "column",
         }}
       >
-        <Topbar />
-        <Box sx={{ py: 3, px: 3, flex: 1, }}>
+        <Topbar openState={openState}  />
+        <Box sx={{ py: 3, px: 3, flex: 1 }}>
           <Outlet />
         </Box>
       </Box>

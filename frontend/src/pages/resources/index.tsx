@@ -20,6 +20,8 @@ import {
   TableHead,
   TableRow,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import { Add, Delete, Download, Preview, Search } from "@mui/icons-material";
 import { grey } from "@mui/material/colors";
@@ -27,45 +29,13 @@ import { DateRangeSelector } from "../../components/DateRangeSelector";
 import { format, parseISO } from "date-fns";
 import ModalButton from "../../components/ModalForm";
 import DynamicForm from "../../components/DynamicForm";
+import PaginationTable from "../../components/PaginationTable";
 
 export const ResourceList = () => {
-  const [loading, setLoading] = useState(false);
-  const [resources, setResources] = useState([]);
-
-  const fetchResources = () =>
-    handleFetch("/resources", setLoading, setResources, console.error);
-
-  useEffect(() => {
-    fetchResources();
-  }, []);
-
-  const [searchTerm, setSearchTerm] = useState<string>("");
-  const dateRangeState = useState<[string, string]>([
-    format(new Date(), "yyyy-MM-dd"),
-    format(new Date(), "yyyy-MM-dd"),
-  ]);
-  const [dateRange] = dateRangeState;
-
-  const filteredResources = resources.filter((resource: any) =>
-    (
-      format(parseISO(resource.date), "dd MMM yyyy") +
-      " " +
-      resource.title +
-      " " +
-      resource.fileUrl +
-      " " +
-      resource.fileType +
-      " " +
-      resource.batchIds.map((batch: any) => batch.name).join(" ") +
-      " " +
-      resource.userIds.map((user: any) => user.name).join(" ") +
-      " " +
-      (resource.all ? "all" : "")
-    )
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase())
-  );
-
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"), {
+    noSsr: true,
+  });
   return (
     <Stack
       sx={{ overflow: "hidden", height: "100%", flexFlow: "column" }}
@@ -79,7 +49,6 @@ export const ResourceList = () => {
         <ModalButton
           modal={
             <DynamicForm
-              key={String(resources.length)}
               fields={[
                 {
                   type: "date",
@@ -110,7 +79,7 @@ export const ResourceList = () => {
           url="/resources"
           title="New Resource"
           button="Create"
-          onSuccess={fetchResources}
+          onSuccess={() => {}}
           success="Created a new Resource Successfully!"
         >
           <Button variant="contained" size="small">
@@ -120,39 +89,19 @@ export const ResourceList = () => {
       </Box>
       <Card elevation={0} sx={{ borderRadius: 5, bgcolor: grey[100] }}>
         <CardContent sx={{ display: "flex", flexFlow: "column", gap: 3 }}>
-          <Box display={"flex"} gap={3}>
-            <FormControl fullWidth>
-              <OutlinedInput
-                placeholder="Search Score"
-                sx={{ borderRadius: 2.5, bgcolor: "white" }}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                startAdornment={
-                  <InputAdornment position="start">
-                    <Search />
-                  </InputAdornment>
-                }
-              />
-            </FormControl>
-            <DateRangeSelector state={dateRangeState} />
-          </Box>
-          <Box>
-            {loading ? (
-              <Box
-                display="flex"
-                justifyContent="center"
-                alignItems="center"
-                py={8}
-              >
-                <CircularProgress />
-              </Box>
-            ) : filteredResources.length > 0 ? (
+          <PaginationTable
+            name={"resources"}
+            url={`/resources`}
+            placeholder="Search for Resources"
+            notFound="No Resources found"
+          >
+            {(data) => (
               <TableContainer
                 elevation={0}
                 component={Paper}
                 sx={{ borderRadius: 2 }}
               >
-                <Table>
+                <Table sx={{ width: isMobile ? "max-content" : "100%" }}>
                   <TableHead>
                     <TableRow>
                       <TableCell>UID</TableCell>
@@ -164,7 +113,7 @@ export const ResourceList = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {filteredResources.map((resource: any, index: number) => (
+                    {data.map((resource: any, index: number) => (
                       <TableRow key={index}>
                         <TableCell>{index + 1}</TableCell>
                         <TableCell>
@@ -231,7 +180,7 @@ export const ResourceList = () => {
                             url={`/resources/${resource._id}/delete`}
                             title="Delete Schedule"
                             button="Delete"
-                            onSuccess={fetchResources}
+                            onSuccess={() => {}}
                             success="Deleted the Schedule Successfully!"
                           >
                             <IconButton>
@@ -244,12 +193,8 @@ export const ResourceList = () => {
                   </TableBody>
                 </Table>
               </TableContainer>
-            ) : (
-              <Typography variant="body1" textAlign="center" py={4}>
-                No Resources found.
-              </Typography>
             )}
-          </Box>
+          </PaginationTable>
         </CardContent>
       </Card>
     </Stack>

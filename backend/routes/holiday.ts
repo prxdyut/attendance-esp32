@@ -41,25 +41,48 @@ router.post("/", async (req, res) => {
 
 // Get all holidays
 router.get("/", async (req, res) => {
-  const { startDate, endDate } = req.query;
+  const { startDate, endDate, page = 1, rows = 10, search = "" } = req.query;
   const start = startOfDay(startDate as string);
-
   const end = endOfDay(endDate as string);
+  const pageNumber = parseInt(page as string);
+  const limitNumber = parseInt(rows as string);
 
   try {
-    let holidays;
-    if (startDate && endDate)
-      holidays = await Holiday.find({
-        date: {
-          $gte: start,
-          $lte: end,
-        },
-        deleted: false,
-      })
-        .populate("batchIds")
-        .populate("userIds");
+    const query: any = {};
 
-    res.json({ success: true, data: holidays });
+    if (search) {
+      query.$or = [
+        { event: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    if (startDate && endDate) {
+      query.date = {
+        $gte: startOfDay(new Date(startDate as string)),
+        $lte: endOfDay(new Date(endDate as string)),
+      };
+    }
+
+    const count = await Holiday.countDocuments(query);
+    const pages = Math.ceil(count / limitNumber);
+
+    const holidays = await Holiday.find(query)
+      .populate("batchIds")
+      .populate("userIds")
+      .sort({ timestamp: -1 })
+      .skip((pageNumber - 1) * limitNumber)
+      .limit(limitNumber);
+
+    res.json({
+      success: true,
+      data: { holidays },
+      pagination: {
+        current: pageNumber,
+        total: pages,
+        rows: limitNumber,
+        count,
+      },
+    });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }

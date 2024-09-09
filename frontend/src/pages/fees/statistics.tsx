@@ -20,6 +20,8 @@ import {
   TableHead,
   TableRow,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import {
   AccountBalanceWalletOutlined,
@@ -37,49 +39,23 @@ import Grid2 from "@mui/material/Unstable_Grid2/Grid2";
 import ModalButton from "../../components/ModalForm";
 import { StudentFeeDetails } from "./single";
 import DynamicForm from "../../components/DynamicForm";
+import PaginationTable from "../../components/PaginationTable";
 
 export const FeeStatistics = () => {
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<any>();
-  const [students, setStudents] = useState<any[]>([]);
-  const [searchTerm, setSearchTerm] = useState<string>("");
 
   const fetchFees = () => {
     handleFetch("/fees/statistics", setLoading, setStats, console.error);
-    handleFetch("/fees/", setLoading, setStudents, console.error);
   };
   useEffect(() => {
     fetchFees();
   }, []);
 
-  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(
-    null
-  );
-
-  const handleStudentSelect = (_: string, ids: string[]) => {
-    if (ids.length > 0) {
-      setSelectedStudentId(ids[0]);
-    } else {
-      setSelectedStudentId(null);
-    }
-  };
-  console.log(students);
-  const filteredStudents = students.filter((student: any) =>
-    (
-      student.name +
-      " " +
-      student.totalFees +
-      " " +
-      student.totalPaid +
-      " " +
-      student.remainingAmount +
-      " " +
-      student.batches.map((batch: any) => batch.name).join(" ")
-    )
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase())
-  );
-
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"), {
+    noSsr: true,
+  });
   return (
     <Stack
       sx={{ overflow: "hidden", height: "100%", flexFlow: "column" }}
@@ -91,8 +67,8 @@ export const FeeStatistics = () => {
         </Typography>
       </Box>
 
-      <Grid2 container gap={3}>
-        <Grid2 xs>
+      <Grid2 container spacing={3}>
+        <Grid2 xs={12} sm={4}>
           <Card elevation={0} sx={{ borderRadius: 5, bgcolor: grey[100] }}>
             <CardContent>
               <Box display={"flex"} alignItems={"center"}>
@@ -107,7 +83,7 @@ export const FeeStatistics = () => {
             </CardContent>
           </Card>
         </Grid2>
-        <Grid2 xs>
+        <Grid2 xs={12} sm={4}>
           <Card elevation={0} sx={{ borderRadius: 5, bgcolor: grey[100] }}>
             <CardContent>
               <Box display={"flex"} alignItems={"center"}>
@@ -122,7 +98,7 @@ export const FeeStatistics = () => {
             </CardContent>
           </Card>
         </Grid2>
-        <Grid2 xs>
+        <Grid2 xs={12} sm={4}>
           <Card elevation={0} sx={{ borderRadius: 5, bgcolor: grey[100] }}>
             <CardContent>
               <Box display={"flex"} alignItems={"center"}>
@@ -141,131 +117,110 @@ export const FeeStatistics = () => {
 
       <Card elevation={0} sx={{ borderRadius: 5, bgcolor: grey[100] }}>
         <CardContent sx={{ display: "flex", flexFlow: "column", gap: 3 }}>
-          <Box display={"flex"} gap={3}>
-            <FormControl fullWidth>
-              <OutlinedInput
-                placeholder="Search Fees"
-                sx={{ borderRadius: 2.5, bgcolor: "white" }}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                startAdornment={
-                  <InputAdornment position="start">
-                    <Search />
-                  </InputAdornment>
-                }
-              />
-            </FormControl>
-          </Box>
-          <Box>
-            {loading ? (
-              <Box
-                display="flex"
-                justifyContent="center"
-                alignItems="center"
-                py={8}
-              >
-                <CircularProgress />
-              </Box>
-            ) : filteredStudents?.length > 0 ? (
-              <TableContainer
-                elevation={0}
-                component={Paper}
-                sx={{ borderRadius: 2 }}
-              >
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>UID</TableCell>
-                      <TableCell>Name</TableCell>
-                      <TableCell>Total</TableCell>
-                      <TableCell>Paid</TableCell>
-                      <TableCell>Remaining</TableCell>
-                      <TableCell>Batch</TableCell>
-                      <TableCell>Actions</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {filteredStudents.map((student: any, index: number) => (
-                      <TableRow key={index}>
-                        <TableCell>{index + 1}</TableCell>
-                        <TableCell>{student?.name}</TableCell>
-                        <TableCell>{student?.totalFees}</TableCell>
-                        <TableCell>{student?.totalPaid}</TableCell>
-                        <TableCell>{student?.remainingAmount}</TableCell>
-                        <TableCell>
-                          {student.batches
-                            .map((batch: any) => batch.name)
-                            .join(" ")}
-                        </TableCell>
-                        <TableCell sx={{ display: "flex" }}>
-                          <ModalButton
-                            modal={<StudentFeeDetails />}
-                            path={`/${student._id}`}
-                            url=""
-                            title="Score Details"
-                            button=""
-                            onSuccess={() => {}}
-                            success=""
-                          >
-                            <IconButton>
-                              <RemoveRedEyeOutlined />
-                            </IconButton>
-                          </ModalButton>
-                          <ModalButton
-                            modal={
-                              <DynamicForm
-                                key={String(students.length)}
-                                fields={[
-                                  {
-                                    type: "date",
-                                    label: "Date",
-                                    name: "date",
-                                    required: true,
-                                  },
-                                  {
-                                    type: "number",
-                                    label: "Amount",
-                                    name: "amount",
-                                    required: true,
-                                  },
-                                  {
-                                    type: "text",
-                                    label: "Payment Mode",
-                                    name: "mode",
-                                    required: true,
-                                  },
-                                  {
-                                    type: "text",
-                                    label: "Reference No.",
-                                    name: "refNo",
-                                    required: true,
-                                  },
-                                ]}
-                              />
-                            }
-                            path={`/${student._id}/installment`}
-                            url={`/fees/${student._id}/installment`}
-                            title="Create Installment"
-                            button="Create"
-                            onSuccess={fetchFees}
-                            success="Created a new Installment Successfully!"
-                          >
-                            <IconButton>
-                              <Add />
-                            </IconButton>
-                          </ModalButton>
-                        </TableCell>
+          <PaginationTable
+            name={"fees"}
+            url={`/fees`}
+            placeholder="Search for Users"
+            notFound="No Users found"
+            noDateRange
+          >
+            {(data) => {
+              return (
+                <TableContainer
+                  elevation={0}
+                  component={Paper}
+                  sx={{ borderRadius: 2 }}
+                >
+                  <Table sx={{ width: isMobile ? "max-content" : "100%" }}>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>UID</TableCell>
+                        <TableCell>Name</TableCell>
+                        <TableCell>Total</TableCell>
+                        <TableCell>Paid</TableCell>
+                        <TableCell>Remaining</TableCell>
+                        <TableCell>Batch</TableCell>
+                        <TableCell>Actions</TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            ) : (
-              <Typography variant="body1" textAlign="center" py={4}>
-                No holidays found.
-              </Typography>
-            )}
-          </Box>
+                    </TableHead>
+                    <TableBody>
+                      {data.map((student: any, index: number) => (
+                        <TableRow key={index}>
+                          <TableCell>{index + 1}</TableCell>
+                          <TableCell>{student?.name}</TableCell>
+                          <TableCell>{student?.totalFees}</TableCell>
+                          <TableCell>{student?.totalPaid}</TableCell>
+                          <TableCell>{student?.remainingAmount}</TableCell>
+                          <TableCell>
+                            {student.batches
+                              .map((batch: any) => batch.name)
+                              .join(" ")}
+                          </TableCell>
+                          <TableCell sx={{ display: "flex" }}>
+                            <ModalButton
+                              modal={<StudentFeeDetails />}
+                              path={`/${student._id}`}
+                              url=""
+                              title="Score Details"
+                              button=""
+                              onSuccess={() => {}}
+                              success=""
+                            >
+                              <IconButton>
+                                <RemoveRedEyeOutlined />
+                              </IconButton>
+                            </ModalButton>
+                            <ModalButton
+                              modal={
+                                <DynamicForm
+                                  fields={[
+                                    {
+                                      type: "date",
+                                      label: "Date",
+                                      name: "date",
+                                      required: true,
+                                    },
+                                    {
+                                      type: "number",
+                                      label: "Amount",
+                                      name: "amount",
+                                      required: true,
+                                    },
+                                    {
+                                      type: "text",
+                                      label: "Payment Mode",
+                                      name: "mode",
+                                      required: true,
+                                    },
+                                    {
+                                      type: "text",
+                                      label: "Reference No.",
+                                      name: "refNo",
+                                      required: true,
+                                    },
+                                  ]}
+                                />
+                              }
+                              path={`/${student._id}/installment`}
+                              url={`/fees/${student._id}/installment`}
+                              title="Create Installment"
+                              button="Create"
+                              onSuccess={() => {}}
+                              success="Created a new Installment Successfully!"
+                            >
+                              <IconButton>
+                                <Add />
+                              </IconButton>
+                            </ModalButton>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              );
+            }}
+          </PaginationTable>
         </CardContent>
       </Card>
     </Stack>

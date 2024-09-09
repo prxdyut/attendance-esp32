@@ -3,7 +3,7 @@ import { NewCard, Punch, User } from "../mongodb/models";
 import { addMessageToQueue } from "./whatsapp";
 import { getMessage } from "../utils/message";
 import { fetchData } from "./statistics";
-import { addDays } from "date-fns";
+import { addDays, endOfDay, format, startOfDay } from "date-fns";
 import { punchesWebsocket } from "..";
 
 const router = express.Router();
@@ -41,7 +41,8 @@ router.get("/", async (req, res) => {
   }
 });
 
-async function processPunch(uid: string, timestamp: Date) {
+async function processPunch(uid0: string, timestamp: Date) {
+  let uid = uid0[0] == "P" ? uid0.slice(1) : uid0;
   const user = await User.findOne({ cardUid: uid });
 
   if (user) {
@@ -109,11 +110,13 @@ async function processPunch(uid: string, timestamp: Date) {
         }),
         userId: user._id.toString(),
       });
-    punchesWebsocket.emit("cardPunch", [{
-      name: user.name,
-      uid,
-      time: timestamp,
-    }]);
+    punchesWebsocket.emit("cardPunch", [
+      {
+        name: user.name,
+        uid,
+        time: format(timestamp, "h:mm a"),
+      },
+    ]);
     return { status: "success", message: "Punch recorded", uid };
   } else {
     const existingPunch = await NewCard.findOne({
@@ -134,6 +137,7 @@ async function processPunch(uid: string, timestamp: Date) {
     }
 
     const newCard = new NewCard({ uid, timestamp });
+    console.log(uid, timestamp);
     await newCard.save();
 
     return { status: "warning", message: "Unrecognized card recorded", uid };
@@ -204,18 +208,42 @@ router.get("/absent", async (req, res) => {
 });
 
 router.get("/new", async (req, res) => {
-  const { startDate, endDate } = req.query;
+  const { startDate, endDate, page = 1, rows = 10, search = "" } = req.query;
+  const pageNumber = parseInt(page as string);
+  const limitNumber = parseInt(rows as string);
+
   try {
-    const newCards = await NewCard.find({
-      timestamp: {
-        $gte: startDate ? new Date(startDate as string) : new Date(),
-        $lte: endDate ? addDays(endDate as string, 1) : addDays(new Date(), 1),
-      },
-    });
+    const query: any = {};
+
+    if (startDate && endDate) {
+      query.timestamp = {
+        $gte: startOfDay(new Date(startDate as string)),
+        $lte: endOfDay(new Date(endDate as string)),
+      };
+    }
+
+    if (search) {
+      query.$or = [{ uid: { $regex: search, $options: "i" } }];
+    }
+
+    const count = await NewCard.countDocuments(query);
+    const pages = Math.ceil(count / limitNumber);
+
+    const newCards = await NewCard.find(query)
+      .sort({ timestamp: -1 })
+      .skip((pageNumber - 1) * limitNumber)
+      .limit(limitNumber);
+
     res.json({
       success: true,
       data: {
         newCards,
+      },
+      pagination: {
+        current: pageNumber,
+        total: pages,
+        rows: limitNumber,
+        count,
       },
     });
   } catch (error: any) {

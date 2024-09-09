@@ -36,8 +36,12 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 
 const drawerWidth = 240;
-export default function Topbar() {
-  const [mobileOpen, setMobileOpen] = useState(false);
+export default function Topbar({
+  openState,
+}: {
+  openState: [boolean, React.Dispatch<React.SetStateAction<boolean>>];
+}) {
+  const [mobileOpen, setMobileOpen] = openState;
   const [isClosing, setIsClosing] = useState(false);
 
   const handleDrawerToggle = () => {
@@ -202,7 +206,7 @@ export default function Topbar() {
               <MenuItem
                 onClick={handleCloseUserMenu}
                 sx={(theme) => ({
-                  gap : 2,
+                  gap: 2,
                   color: theme.palette.error.main,
                   "& .MuiTouchRipple-root": {
                     color: theme.palette.error.dark,

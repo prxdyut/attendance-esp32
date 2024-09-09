@@ -2,18 +2,12 @@
 
 import React, { useState, useEffect } from "react";
 import { handleFetch } from "../../utils/handleFetch";
-import { Link } from "react-router-dom";
 import {
   Box,
   Button,
   Card,
   CardContent,
-  CircularProgress,
-  FormControl,
   IconButton,
-  InputAdornment,
-  InputLabel,
-  OutlinedInput,
   Paper,
   Stack,
   Table,
@@ -23,62 +17,26 @@ import {
   TableHead,
   TableRow,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import {
   Add,
   ControlPointDuplicate,
-  Preview,
   RemoveRedEyeOutlined,
-  Search,
 } from "@mui/icons-material";
 import { grey } from "@mui/material/colors";
-import { DateRangeSelector } from "../../components/DateRangeSelector";
 import { endOfMonth, format, parseISO, startOfMonth } from "date-fns";
 import ModalButton from "../../components/ModalForm";
 import DynamicForm, { defaultDate } from "../../components/DynamicForm";
-import Grid2 from "@mui/material/Unstable_Grid2/Grid2";
 import { AlertDetails } from "./view";
+import PaginationTable from "../../components/PaginationTable";
 
 export const AlertList: React.FC = () => {
-  const [alerts, setAlerts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState<string>("");
-  const dateRangeState = useState<[string, string]>([
-    format(startOfMonth(new Date()), "yyyy-MM-dd"),
-    format(endOfMonth(new Date()), "yyyy-MM-dd"),
-  ]);
-  const [dateRange] = dateRangeState;
-
-  const fetchAlerts = () => {
-    const queryParams = new URLSearchParams({
-      startDate: dateRange[0],
-      endDate: dateRange[1],
-    });
-    handleFetch(`/alerts?${queryParams}`, setLoading, setAlerts, console.error);
-  };
-
-  useEffect(() => {
-    fetchAlerts();
-  }, [...dateRange]);
-
-  const filteredAlerts = alerts.filter((alert: any) =>
-    (
-      format(parseISO(alert.date), "dd MMM yyyy") +
-      " " +
-      alert.title +
-      " " +
-      alert.message +
-      " " +
-      alert.batchIds.map((batch: any) => batch.name).join(" ") +
-      " " +
-      alert.userIds.map((user: any) => user.name).join(" ") +
-      " " +
-      (alert.all ? "all" : "")
-    )
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase())
-  );
-
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"), {
+    noSsr: true,
+  });
   return (
     <Stack
       sx={{ overflow: "hidden", height: "100%", flexFlow: "column" }}
@@ -108,7 +66,7 @@ export const AlertList: React.FC = () => {
           url={`/alerts`}
           title="New Alert"
           button="Create"
-          onSuccess={fetchAlerts}
+          onSuccess={() => {}}
           success="Created new Alert successfully!"
         >
           <Button variant="contained" size="small">
@@ -118,39 +76,19 @@ export const AlertList: React.FC = () => {
       </Box>
       <Card elevation={0} sx={{ borderRadius: 5, bgcolor: grey[100] }}>
         <CardContent sx={{ display: "flex", flexFlow: "column", gap: 3 }}>
-          <Box display={"flex"} gap={3}>
-            <FormControl fullWidth>
-              <OutlinedInput
-                placeholder="Search Score"
-                sx={{ borderRadius: 2.5, bgcolor: "white" }}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                startAdornment={
-                  <InputAdornment position="start">
-                    <Search />
-                  </InputAdornment>
-                }
-              />
-            </FormControl>
-            <DateRangeSelector state={dateRangeState} />
-          </Box>
-          <Box>
-            {loading ? (
-              <Box
-                display="flex"
-                justifyContent="center"
-                alignItems="center"
-                py={8}
-              >
-                <CircularProgress />
-              </Box>
-            ) : filteredAlerts.length > 0 ? (
+          <PaginationTable
+            name={"alerts"}
+            url={`/alerts`}
+            placeholder="Search for Alerts"
+            notFound="No Alerts found"
+          >
+            {(data) => (
               <TableContainer
                 elevation={0}
                 component={Paper}
                 sx={{ borderRadius: 2 }}
               >
-                <Table>
+                <Table sx={{ width: isMobile ? "max-content" : "100%" }}>
                   <TableHead>
                     <TableRow>
                       <TableCell>UID</TableCell>
@@ -162,7 +100,7 @@ export const AlertList: React.FC = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {filteredAlerts.map((alert: any, index: number) => (
+                    {data.map((alert: any, index: number) => (
                       <TableRow key={index}>
                         <TableCell>{index + 1}</TableCell>
                         <TableCell>
@@ -205,7 +143,7 @@ export const AlertList: React.FC = () => {
                             </>
                           )}
                         </TableCell>
-                        <TableCell sx={{display: 'flex'}}>
+                        <TableCell sx={{ display: "flex" }}>
                           <ModalButton
                             modal={<AlertDetails />}
                             path={`/${alert._id}`}
@@ -264,7 +202,7 @@ export const AlertList: React.FC = () => {
                             url={`/alerts`}
                             title="Duplicate Alert"
                             button="Create"
-                            onSuccess={fetchAlerts}
+                            onSuccess={() => {}}
                             success="Created new Alert successfully!"
                           >
                             <IconButton>
@@ -277,12 +215,8 @@ export const AlertList: React.FC = () => {
                   </TableBody>
                 </Table>
               </TableContainer>
-            ) : (
-              <Typography variant="body1" textAlign="center" py={4}>
-                No Alerts found.
-              </Typography>
             )}
-          </Box>
+          </PaginationTable>
         </CardContent>
       </Card>
     </Stack>

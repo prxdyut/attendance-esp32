@@ -2,7 +2,15 @@ import { useState, useEffect } from "react";
 import { TargetSelector } from "../components/SelectTarget";
 import { handleFetch } from "../utils/handleFetch";
 import { endOfDay, startOfDay, subDays } from "date-fns";
-import { Box, Card, Divider, Stack, Typography } from "@mui/material";
+import {
+  Box,
+  Card,
+  Divider,
+  Stack,
+  Typography,
+  useMediaQuery,
+  useTheme,
+} from "@mui/material";
 import { DatePicker, LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFnsV3";
 import { grey } from "@mui/material/colors";
@@ -65,6 +73,11 @@ export default function Statistics() {
     setSelectedIds(ids);
   };
 
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"), {
+    noSsr: true,
+  });
+
   const StatCard = ({
     title,
     value,
@@ -85,23 +98,37 @@ export default function Statistics() {
       }}
     >
       <Typography fontWeight={500}>{title}</Typography>
-      <Typography fontWeight={700} variant="h5">{`${value}`}</Typography>
+      <Typography
+        fontWeight={700}
+        variant={value == "Coming soon" ? "body2" : "h5"}
+      >{`${value}`}</Typography>
     </Card>
   );
-  
+
   return (
     <Stack sx={{ height: "100%", flexFlow: "column" }} gap={2}>
-      <Box display={"flex"}>
+      <Box
+        display={"flex"}
+        sx={{
+          flexFlow: isMobile ? "column" : "row",
+          justifyContent: "space-between",
+        }}
+        gap={1}
+      >
         <Typography variant="h5" fontWeight={600}>
           Statistics
         </Typography>
-        <Box flex={1} />
-        <Stack direction={"row"} gap={1}>
-          <TargetSelector onSelectionChange={handleSelectionChange} />
-        </Stack>
+        <TargetSelector onSelectionChange={handleSelectionChange} />
       </Box>
       <Divider />
-      <Box display={"flex"}>
+      <Box
+        display={"flex"}
+        sx={{
+          flexFlow: isMobile ? "column" : "row",
+          justifyContent: "space-between",
+        }}
+        gap={1}
+      >
         <Typography variant="h6" fontWeight={600}>
           Attendance
         </Typography>
@@ -135,39 +162,57 @@ export default function Statistics() {
           </LocalizationProvider>
         </Stack>
       </Box>
-      <Stack gap={2} direction={"row"}>
+      <Grid2 container direction={"row"} spacing={2}>
         {stats ? (
           <>
-            <StatCard title="Present" value={stats.present} link="./present" />
-            <StatCard title="Absent" value={stats.absent} />
-            <StatCard title="Late Arrivals" value="Coming soon" />
-            <StatCard title="Early Exits" value="Coming soon" />
+            <Grid2 xs={6} sm={3}>
+              <StatCard
+                title="Present"
+                value={stats.present}
+                link="./present"
+              />
+            </Grid2>
+            <Grid2 xs={6} sm={3}>
+              <StatCard title="Absent" value={stats.absent} />
+            </Grid2>
+            <Grid2 xs={6} sm={3}>
+              <StatCard title="Late Arrivals" value="Coming soon" />
+            </Grid2>
+            <Grid2 xs={6} sm={3}>
+              <StatCard title="Early Exits" value="Coming soon" />
+            </Grid2>
           </>
         ) : null}
-      </Stack>
-      <Stack gap={2} direction={"row"}>
-        <StatCard
-          title="Total Holidays"
-          value={stats?.holidayStudents || "N/A"}
-          link="/holidays"
-        />
-        <StatCard
-          title="Average Attendance"
-          value={
-            stats
-              ? `${(
-                  (stats.present / (stats.absent + stats.present)) *
-                  100
-                ).toFixed(0)}%`
-              : "N/A"
-          }
-        />
-        <StatCard
-          title="Unexcused Absence"
-          value="Coming soon"
-          link="./unexcused"
-        />
-      </Stack>
+      </Grid2>
+      <Grid2 container spacing={2}>
+        <Grid2 xs={12} sm={4}>
+          <StatCard
+            title="Total Holidays"
+            value={stats?.holidayStudents || "N/A"}
+            link="/holidays"
+          />
+        </Grid2>
+        <Grid2 xs={12} sm={4}>
+          <StatCard
+            title="Average Attendance"
+            value={
+              stats
+                ? `${(
+                    (stats.present / (stats.absent + stats.present)) *
+                    100
+                  ).toFixed(0)}%`
+                : "N/A"
+            }
+          />
+        </Grid2>
+        <Grid2 xs={12} sm={4}>
+          <StatCard
+            title="Defaulters"
+            value="Coming soon"
+            link="./unexcused"
+          />
+        </Grid2>
+      </Grid2>
       <Divider />
       <Box display={"flex"}>
         <Typography variant="h6" fontWeight={600}>
@@ -175,13 +220,26 @@ export default function Statistics() {
         </Typography>
         <Box flex={1} />
       </Box>
-      <Stack gap={2} direction={"row"}>
-        <StatCard title="Total Fees" value={fees?.totalFees} />
-        <StatCard title="Total Paid" value={fees?.paidFees} />
-        <StatCard title="Remaining Fees" value={fees?.remainingFees} />
-      </Stack>
+      <Grid2 container spacing={2}>
+        <Grid2 xs={12} sm={4}>
+          <StatCard title="Total Fees" value={fees?.totalFees} />
+        </Grid2>
+        <Grid2 xs={6} sm={4}>
+          <StatCard title="Paid" value={fees?.paidFees} />
+        </Grid2>
+        <Grid2 xs={6} sm={4}>
+          <StatCard title="Remaining" value={fees?.remainingFees} />
+        </Grid2>
+      </Grid2>
       <Divider />
-      <Box display={"flex"}>
+      <Box
+        display={"flex"}
+        sx={{
+          flexFlow: isMobile ? "column" : "row",
+          justifyContent: "space-between",
+        }}
+        gap={1}
+      >
         <Typography variant="h6" fontWeight={600}>
           Scores
         </Typography>
@@ -216,13 +274,13 @@ export default function Statistics() {
         </Stack>
       </Box>
       <Stack gap={2} direction={"row"}>
-        <StatCard title="Total" value={scores?.totalExams} />
+        {!isMobile && <StatCard title="Total" value={scores?.totalExams} />}
         <StatCard title="Average" value={scores?.averagePerformance + "%"} />
         <StatCard title="Unattended" value={scores?.averageAttendance + "%"} />
       </Stack>
       <Grid2 container spacing={2}>
         {scores?.subjectWiseScores?.map((score: any) => (
-          <Grid2 xs={6}>
+          <Grid2 xs={12} sm={6}>
             <Box
               display={"flex"}
               sx={{ bgcolor: grey[100], px: 2, py: 1, borderRadius: 2.5 }}

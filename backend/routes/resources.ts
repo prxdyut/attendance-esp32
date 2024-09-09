@@ -3,6 +3,7 @@
 import express from "express";
 import fs from "fs";
 import { Resource } from "../mongodb/models";
+import { endOfDay, startOfDay } from "date-fns";
 
 const router = express.Router();
 
@@ -22,11 +23,57 @@ router.post("/", async (req, res) => {
 
 // Get all resources
 router.get("/", async (req, res) => {
+  const { startDate, endDate, page = 1, rows = 10, search = "" } = req.query;
+  const pageNumber = parseInt(page as string);
+  const limitNumber = parseInt(rows as string);
+
+  const start = startOfDay(startDate as string);
+  const end = endOfDay(endDate as string);
   try {
-    const resources = await Resource.find({deleted: false})
+    let query: any = {
+      date: {
+        $gte: start,
+        $lte: end,
+      },
+      deleted: false,
+    };
+
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: "i" } },
+        { message: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const count = await Resource.countDocuments(query);
+    const pages = Math.ceil(count / limitNumber);
+
+    const resources = await Resource.find(query)
       .populate("batchIds")
-      .populate("userIds");
-    res.json({ success: true, data: resources });
+      .populate("userIds")
+      .skip((pageNumber - 1) * limitNumber)
+      .limit(limitNumber)
+      .sort({ date: 1 }); // Ensure consistent sorting;
+    console.log({
+      success: true,
+      data: { resources },
+      pagination: {
+        current: pageNumber,
+        total: pages,
+        rows: limitNumber,
+        count,
+      },
+    });
+    res.json({
+      success: true,
+      data: { resources },
+      pagination: {
+        current: pageNumber,
+        total: pages,
+        rows: limitNumber,
+        count,
+      },
+    });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }

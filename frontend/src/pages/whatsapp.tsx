@@ -18,6 +18,8 @@ import {
   Tooltip,
   IconButton,
   Stack,
+  useTheme,
+  useMediaQuery,
 } from "@mui/material";
 import {
   Refresh as RefreshIcon,
@@ -172,6 +174,11 @@ export default function Whatsapp() {
     );
   };
 
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"), {
+    noSsr: true,
+  });
+
   return (
     <Box
       sx={{
@@ -207,7 +214,8 @@ export default function Whatsapp() {
             sx={{
               display: "flex",
               justifyContent: "space-between",
-              alignItems: "center",
+              alignItems: isMobile ? "" :"center",
+              flexFlow: isMobile ? "column" : "row"
             }}
           >
             <Box display={"flex"} gap={2} alignItems={"center"}>
@@ -220,7 +228,7 @@ export default function Whatsapp() {
                 size="small"
               />
             </Box>
-            <Box>
+            <Box sx={{textAlign: isMobile ? 'end' : ""}}>
               <Tooltip title="Check Status">
                 <IconButton onClick={checkApiStatus} color="primary">
                   <RefreshIcon />
@@ -295,24 +303,27 @@ export default function Whatsapp() {
               Test Message
             </Typography>
             <form onSubmit={sendTestMessage}>
-              <Stack direction={"row"} gap={2}>
+              <Stack direction={isMobile ? "column":"row"} gap={2}>
                 <TextField
                   fullWidth
                   name="phoneNumber"
                   label="Phone Number"
                   variant="outlined"
+                  sx={{borderRadius: 2.5}}
                 />
                 <TextField
                   fullWidth
                   name="contactName"
                   label="Contact Name"
                   variant="outlined"
+                  sx={{borderRadius: 2.5}}
                 />
                 <TextField
                   fullWidth
                   name="message"
                   label="Message"
                   variant="outlined"
+                  sx={{borderRadius: 2.5}}
                 />
                 <Button
                   fullWidth
@@ -347,7 +358,7 @@ export default function Whatsapp() {
               overflow: "hidden",
             }}
           >
-            <Box display={"flex"} sx={{ pb: 1 }}>
+            <Box display={"flex"} sx={{ pb: 1, flexFlow: isMobile? "column" : 'row' }}>
               <Typography variant="h6" gutterBottom>
                 Failed Messages
               </Typography>

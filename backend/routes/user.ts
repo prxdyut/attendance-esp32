@@ -28,14 +28,43 @@ router.post("/", async (req, res) => {
 });
 
 router.get("/", async (req, res) => {
-  const { role } = req.query;
+  const { role, page = 1, rows = 10, search = "" } = req.query;
+  const pageNumber = parseInt(page as string);
+  const limitNumber = parseInt(rows as string);
+
   try {
-    let query: any = { deleted: false };
+    const query: any = { deleted: false };
+
+    if (search) {
+      query.$or = [
+        { total: { $regex: search, $options: "i" } },
+        { subject: { $regex: search, $options: "i" } },
+        { title: { $regex: search, $options: "i" } },
+      ];
+    }
+
     if (role) query.role = [role];
     else query.role = ["student", "faculty"];
-    const users = await User.find(query).populate("batchIds");
 
-    res.json({ success: true, data: { users } });
+    const count = await User.countDocuments(query);
+    const pages = Math.ceil(count / limitNumber);
+
+    const users = await User.find(query)
+      .populate("batchIds")
+      .sort({ timestamp: -1 })
+      .skip((pageNumber - 1) * limitNumber)
+      .limit(limitNumber);
+
+    res.json({
+      success: true,
+      data: { users },
+      pagination: {
+        current: pageNumber,
+        total: pages,
+        rows: limitNumber,
+        count,
+      },
+    });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }

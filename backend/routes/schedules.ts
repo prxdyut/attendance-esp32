@@ -1,20 +1,31 @@
 // routes/schedules.js
 import express from "express";
 import { Schedule } from "../mongodb/models";
+import { addDays, endOfDay, startOfDay } from "date-fns";
 
 const router = express.Router();
 
 // Get all schedules
 router.get("/", async (req, res) => {
   try {
-    const { startDate, endDate, batchId } = req.query;
+    const {
+      startDate,
+      endDate,
+      batchId,
+      page = 1,
+      rows = 10,
+      search = "",
+    } = req.query;
+    const pageNumber = parseInt(page as string);
+    const limitNumber = parseInt(rows as string);
+
     let query: any = {};
     query.deleted = false;
 
     if (startDate && endDate) {
       query.date = {
-        $gte: new Date(startDate as string),
-        $lte: new Date(endDate as string),
+        $gte: startOfDay(new Date(startDate as string)),
+        $lte: endOfDay(new Date(endDate as string)),
       };
     }
 
@@ -22,11 +33,29 @@ router.get("/", async (req, res) => {
       query.batchId = batchId;
     }
 
+    if (search) {
+      query.$or = [{ subject: { $regex: search, $options: "i" } }];
+    }
+
+    const count = await Schedule.countDocuments(query);
+    const pages = Math.ceil(count / limitNumber);
+
     const schedules = await Schedule.find(query)
       .populate("batchIds")
-      .sort({ date: 1, startTime: 1 });
+      .sort({ timestamp: -1 })
+      .skip((pageNumber - 1) * limitNumber)
+      .limit(limitNumber);
 
-    res.json({ success: true, data: schedules });
+    res.json({
+      success: true,
+      data: { schedules },
+      pagination: {
+        current: pageNumber,
+        total: pages,
+        rows: limitNumber,
+        count,
+      },
+    });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }

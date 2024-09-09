@@ -19,22 +19,50 @@ router.post("/", async (req, res) => {
 
 // Get all alerts
 router.get("/", async (req, res) => {
-  const { startDate, endDate } = req.query;
-  const start = startOfDay(startDate as string);
+  const { startDate, endDate, page = 1, rows = 10, search = "" } = req.query;
+  const pageNumber = parseInt(page as string);
+  const limitNumber = parseInt(rows as string);
 
+  const start = startOfDay(startDate as string);
   const end = endOfDay(endDate as string);
 
   try {
-    const alerts = await Alert.find({
+    let query: any = {
       date: {
         $gte: start,
         $lte: end,
       },
-    })
+    };
+
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: "i" } },
+        { message: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const count = await Alert.countDocuments(query);
+    const pages = Math.ceil(count / limitNumber);
+
+    const alerts = await Alert.find(query)
       .populate("batchIds")
-      .populate("userIds");
-    res.json({ success: true, data: alerts });
+      .populate("userIds")
+      .skip((pageNumber - 1) * limitNumber)
+      .limit(limitNumber)
+      .sort({ date: 1 }); // Ensure consistent sorting
+
+    res.json({
+      success: true,
+      data: {alerts},
+      pagination: {
+        current: pageNumber,
+        total: pages,
+        rows: limitNumber,
+        count,
+      },
+    });
   } catch (error: any) {
+    console.error("Error fetching alerts:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 });

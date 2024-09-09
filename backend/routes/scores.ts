@@ -32,23 +32,67 @@ router.post("/", async (req, res) => {
 });
 
 router.get("/", async (req, res) => {
+  const { startDate, endDate, page = 1, rows = 10, search = "" } = req.query;
+  const pageNumber = parseInt(page as string);
+  const limitNumber = parseInt(rows as string);
+
   try {
-    const scores = await Score.find().populate("batchIds");
-    res.json({ success: true, data: scores });
+    const query: any = {};
+
+    if (search) {
+      query.$or = [
+        { total: { $regex: search, $options: "i" } },
+        { subject: { $regex: search, $options: "i" } },
+        { title: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    if (startDate && endDate) {
+      query.date = {
+        $gte: startOfDay(new Date(startDate as string)),
+        $lte: endOfDay(new Date(endDate as string)),
+      };
+    }
+
+    const count = await Score.countDocuments(query);
+    const pages = Math.ceil(count / limitNumber);
+
+    const scores = await Score.find(query)
+      .populate("batchIds")
+      .sort({ timestamp: -1 })
+      .skip((pageNumber - 1) * limitNumber)
+      .limit(limitNumber);
+
+    res.json({
+      success: true,
+      data: {
+        scores,
+      },
+      pagination: {
+        current: pageNumber,
+        total: pages,
+        rows: limitNumber,
+        count,
+      },
+    });
   } catch (error: any) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
 router.get("/statistics", async (req, res) => {
   try {
-    const { selectionType, selectedIds, startDate, endDate } = req.query;
-    const start = startDate
-      ? startOfDay(new Date(startDate as string))
-      : startOfDay(new Date(0));
-    const end = endDate
-      ? endOfDay(new Date(endDate as string))
-      : endOfDay(new Date());
+    const {
+      selectionType,
+      selectedIds,
+      startDate,
+      endDate,
+      page = 1,
+      rows = 10,
+      search = "",
+    } = req.query;
+    const pageNumber = parseInt(page as string);
+    const limitNumber = parseInt(rows as string);
 
     let userIds: string[] = [];
     if (selectionType && selectedIds) {

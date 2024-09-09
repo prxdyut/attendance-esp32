@@ -32,4 +32,4 @@ ENV CHROME_PATH=/usr/bin/google-chrome-stable
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
 # Run the application
-CMD ["bun", "run", "dev"]
+CMD ["bun", "run", "start"]

@@ -27,7 +27,7 @@ import Statistics from "./pages/statistics";
 
 function App() {
   return (
-    <div>
+    <>
       <Routes>
         <Route element={<MainLayout />}>
           <Route path="dashboard" element={<Dashboard />} />
@@ -67,7 +67,7 @@ function App() {
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>
-    </div>
+    </>
   );
 }
 

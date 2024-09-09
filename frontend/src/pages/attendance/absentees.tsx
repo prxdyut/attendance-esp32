@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { handleFetch } from '../../utils/handleFetch';
-import { format, subDays, parseISO } from 'date-fns';
-import { TargetSelector } from '../../components/SelectTarget';
+import React, { useState, useEffect } from "react";
+import { handleFetch } from "../../utils/handleFetch";
+import { format, subDays, parseISO } from "date-fns";
+import { TargetSelector } from "../../components/SelectTarget";
 import {
   Box,
   Card,
@@ -19,10 +19,13 @@ import {
   TableHead,
   TableRow,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import { Search } from "@mui/icons-material";
 import { grey } from "@mui/material/colors";
 import { DateRangeSelector } from "../../components/DateRangeSelector";
+import PaginationTable from "../../components/PaginationTable";
 
 interface Absentee {
   name: string;
@@ -30,43 +33,10 @@ interface Absentee {
 }
 
 export function Absentees() {
-  const [loading, setLoading] = useState<boolean>(false);
-  const [data, setData] = useState<Absentee[]>([]);
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [selectionType, setSelectionType] = useState<string>('all');
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-
-  const dateRangeState = useState<[string, string]>([
-    format(subDays(new Date(), 1), 'yyyy-MM-dd'),
-    format(new Date(), 'yyyy-MM-dd'),
-  ]);
-  const [dateRange] = dateRangeState;
-
-  useEffect(() => {
-    const queryParams = new URLSearchParams({
-      startDate: dateRange[0],
-      endDate: dateRange[1],
-      selectionType,
-      selectedIds: selectedIds.join(','),
-    });
-
-    handleFetch(
-      `/attendance/absentees?${queryParams}`,
-      setLoading,
-      (data: { absentees: Absentee[] }) => setData(data.absentees),
-      console.error
-    );
-  }, [dateRange, selectionType, selectedIds]);
-
-  const handleSelectionChange = (newType: string, newIds: string[]) => {
-    setSelectionType(newType);
-    setSelectedIds(newIds);
-  };
-
-  const filteredData = data.filter((item: Absentee) =>
-    item.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"), {
+    noSsr: true,
+  });
   return (
     <Stack
       sx={{ overflow: "hidden", height: "100%", flexFlow: "column" }}
@@ -79,43 +49,19 @@ export function Absentees() {
       </Box>
       <Card elevation={0} sx={{ borderRadius: 5, bgcolor: grey[100] }}>
         <CardContent sx={{ display: "flex", flexFlow: "column", gap: 3 }}>
-          <Box display="flex" gap={3}>
-            <FormControl fullWidth>
-              <OutlinedInput
-                placeholder="Search students..."
-                sx={{ borderRadius: 2.5, bgcolor: "white" }}
-                value={searchTerm}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
-                startAdornment={
-                  <InputAdornment position="start">
-                    <Search />
-                  </InputAdornment>
-                }
-              />
-            </FormControl>
-            <DateRangeSelector state={dateRangeState} />
-            <TargetSelector
-              onSelectionChange={handleSelectionChange}
-              label="Select Target..."
-            />
-          </Box>
-          <Box>
-            {loading ? (
-              <Box
-                display="flex"
-                justifyContent="center"
-                alignItems="center"
-                py={8}
-              >
-                <CircularProgress />
-              </Box>
-            ) : filteredData.length > 0 ? (
+          <PaginationTable
+            name={"absentees"}
+            url={`/attendance/absentees`}
+            placeholder="Search for Scores"
+            notFound="No Scores found"
+          >
+            {(data) => (
               <TableContainer
                 elevation={0}
                 component={Paper}
                 sx={{ borderRadius: 2 }}
               >
-                <Table>
+                <Table sx={{ width: isMobile ? "max-content" : "100%" }}>
                   <TableHead>
                     <TableRow>
                       <TableCell>Name</TableCell>
@@ -123,23 +69,19 @@ export function Absentees() {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {filteredData.map((item: Absentee, index: number) => (
+                    {data.map((item: Absentee, index: number) => (
                       <TableRow key={index}>
                         <TableCell>{item.name}</TableCell>
                         <TableCell>
-                          {format(parseISO(item.date), 'dd MMM yyyy')}
+                          {format(parseISO(item.date), "dd MMM yyyy")}
                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               </TableContainer>
-            ) : (
-              <Typography variant="body1" textAlign="center" py={4}>
-                No absentees found.
-              </Typography>
             )}
-          </Box>
+          </PaginationTable>
         </CardContent>
       </Card>
     </Stack>

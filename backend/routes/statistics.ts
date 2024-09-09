@@ -98,7 +98,7 @@ router.get("/absent", async (req, res) => {
 
 router.get("/holidays", async (req, res) => {
   try {
-    const { selectionType, selectedIds, startDate, endDate } = req.query;
+    const { selectionType = 'all', selectedIds, startDate, endDate } = req.query;
     const start = startOfDay(startDate as string).toISOString();
 
     const end = endOfDay(endDate as string).toISOString();
@@ -119,9 +119,21 @@ router.get("/holidays", async (req, res) => {
 
 router.get("/holidayFor", async (req, res) => {
   try {
-    const { selectionType, selectedIds, startDate, endDate } = req.query;
-    const start = startOfDay(startDate as string).toISOString();
-    const end = endOfDay(endDate as string).toISOString();
+    const { 
+      selectionType = 'all', 
+      selectedIds, 
+      startDate, 
+      endDate, 
+      page = 1, 
+      rows = 10,
+      search = ""
+    } = req.query;
+
+    const pageNumber = parseInt(page as string);
+    const limitNumber = parseInt(rows as string);
+
+    const start = startOfDay(new Date(startDate as string)).toISOString();
+    const end = endOfDay(new Date(endDate as string)).toISOString();
     console.log(start, end);
 
     const { holidayFor } = await fetchData(
@@ -131,7 +143,7 @@ router.get("/holidayFor", async (req, res) => {
       end
     );
 
-    const holidayFor_ = Object.keys(Object.fromEntries(holidayFor)).flatMap(
+    let holidayFor_ = Object.keys(Object.fromEntries(holidayFor)).flatMap(
       (key) => [
         ...Object.fromEntries(holidayFor)[key].map((obj) => ({
           ...obj._doc,
@@ -140,9 +152,32 @@ router.get("/holidayFor", async (req, res) => {
       ]
     );
 
+    // Apply search filter if provided
+    if (search) {
+      holidayFor_ = holidayFor_.filter((item) => 
+        item.name.toLowerCase().includes(search.toLowerCase()) ||
+        item.reason.toLowerCase().includes(search.toLowerCase())
+      );
+    }
+
+    const count = holidayFor_.length;
+    const pages = Math.ceil(count / limitNumber);
+
+    // Apply pagination
+    const paginatedHolidayFor = holidayFor_.slice(
+      (pageNumber - 1) * limitNumber,
+      pageNumber * limitNumber
+    );
+
     res.json({
       success: true,
-      data: { holidayFor: holidayFor_ },
+      data: { holidayFor: paginatedHolidayFor },
+      pagination: {
+        current: pageNumber,
+        total: pages,
+        rows: limitNumber,
+        count,
+      },
     });
   } catch (error: any) {
     res

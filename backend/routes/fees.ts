@@ -9,10 +9,24 @@ const { ObjectId } = Types;
 const router = express.Router();
 
 router.get("/", async (req, res) => {
-  console.log("students");
+  const { page = 1, rows = 10, search = "" } = req.query;
+  const pageNumber = parseInt(page as string);
+  const limitNumber = parseInt(rows as string);
+
   try {
-    const students = await User.aggregate([
-      { $match: { role: "student" } },
+    const searchRegex = new RegExp(search as string, 'i');
+
+    const pipeline = [
+      { 
+        $match: { 
+          role: "student",
+          deleted: false,
+          $or: [
+            { name: { $regex: searchRegex } },
+            { phone: { $regex: searchRegex } }
+          ]
+        } 
+      },
       {
         $lookup: {
           from: "feeinstallments",
@@ -31,7 +45,7 @@ router.get("/", async (req, res) => {
       },
       {
         $lookup: {
-          from: "batches", // Collection name for the Batch model
+          from: "batches",
           localField: "batchIds",
           foreignField: "_id",
           as: "batches",
@@ -40,16 +54,39 @@ router.get("/", async (req, res) => {
       {
         $project: {
           name: 1,
+          phone: 1,
           totalFees: 1,
           totalPaid: 1,
           remainingAmount: 1,
-          batches: { _id: 1, name: 1 }, // Include only the necessary batch details
+          batches: { _id: 1, name: 1 },
         },
       },
       { $sort: { createdAt: -1 } },
-    ]);
+    ];
 
-    res.json({ success: true, data: students });
+    // Count total documents
+    const countPipeline = [...pipeline, { $count: "total" }];
+    const countResult = await User.aggregate(countPipeline);
+    const count = countResult.length > 0 ? countResult[0].total : 0;
+
+    // Add pagination to the main pipeline
+    pipeline.push({ $skip: (pageNumber - 1) * limitNumber });
+    pipeline.push({ $limit: limitNumber });
+
+    const students = await User.aggregate(pipeline);
+
+    const pages = Math.ceil(count / limitNumber);
+
+    res.json({
+      success: true,
+      data: { fees: students },
+      pagination: {
+        current: pageNumber,
+        total: pages,
+        rows: limitNumber,
+        count,
+      },
+    });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }

@@ -1,19 +1,9 @@
-import React, { useState, useEffect } from "react";
 
-import { Link } from "react-router-dom";
-import { handleFetch } from "../../utils/handleFetch";
 import {
   Box,
   Button,
   Card,
-  CardContent,
-  CircularProgress,
-  FormControl,
-  IconButton,
-  InputAdornment,
-  InputLabel,
-  OutlinedInput,
-  Paper,
+  CardContent, IconButton, Paper,
   Stack,
   Table,
   TableBody,
@@ -22,57 +12,26 @@ import {
   TableHead,
   TableRow,
   Typography,
+  useMediaQuery,
+  useTheme
 } from "@mui/material";
 import {
-  Add,
-  Edit,
-  EditOutlined,
-  Preview,
-  Search,
-  VisibilityOutlined,
+  Add, EditOutlined, VisibilityOutlined
 } from "@mui/icons-material";
-import { endOfMonth, format, parseISO, startOfMonth } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { grey } from "@mui/material/colors";
-import { DateRangeSelector } from "../../components/DateRangeSelector";
 import ModalButton from "../../components/ModalForm";
 import DynamicForm, { defaultDate } from "../../components/DynamicForm";
 import { ViewSingleScore } from "./view";
 import { getAllSubjects, getSubject } from "../../utils/subjectsActions";
+import PaginationTable from "../../components/PaginationTable";
 
 export default function Scores() {
-  const [scores, setScores] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState<string>("");
-  const dateRangeState = useState<[string, string]>([
-    format(startOfMonth(new Date()), "yyyy-MM-dd"),
-    format(endOfMonth(new Date()), "yyyy-MM-dd"),
-  ]);
-  const [dateRange] = dateRangeState;
-
-  useEffect(() => {
-    fetchScores();
-  }, []);
-
-  const fetchScores = () => {
-    handleFetch("/scores", setLoading, setScores, console.log);
-  };
-
-  const filteredScores = scores.filter((score: any) =>
-    (
-      format(parseISO(score.date), "dd MMM yyyy") +
-      " " +
-      score.title +
-      " " +
-      score.subject +
-      " " +
-      score.total +
-      " " +
-      score.batchIds.map((batch: any) => batch.name).join(" ")
-    )
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase())
-  );
-
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"), {
+    noSsr: true,
+  });
+  
   return (
     <Stack
       sx={{ overflow: "hidden", height: "100%", flexFlow: "column" }}
@@ -87,7 +46,6 @@ export default function Scores() {
         <ModalButton
           modal={
             <DynamicForm
-              key={String(scores.length)}
               fields={[
                 {
                   type: "text",
@@ -128,7 +86,7 @@ export default function Scores() {
           url="/scores"
           title="New Score"
           button="Create"
-          onSuccess={fetchScores}
+          onSuccess={() => {}}
           success="Created a new score Successfully!"
         >
           <Button variant="contained" size="small">
@@ -138,162 +96,142 @@ export default function Scores() {
       </Box>
       <Card elevation={0} sx={{ borderRadius: 5, bgcolor: grey[100] }}>
         <CardContent sx={{ display: "flex", flexFlow: "column", gap: 3 }}>
-          <Box display={"flex"} gap={3}>
-            <FormControl fullWidth>
-              <OutlinedInput
-                placeholder="Search Score"
-                sx={{ borderRadius: 2.5, bgcolor: "white" }}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                startAdornment={
-                  <InputAdornment position="start">
-                    <Search />
-                  </InputAdornment>
-                }
-              />
-            </FormControl>
-            <DateRangeSelector state={dateRangeState} />
-          </Box>
-          <Box>
-            {loading ? (
-              <Box
-                display="flex"
-                justifyContent="center"
-                alignItems="center"
-                py={8}
-              >
-                <CircularProgress />
-              </Box>
-            ) : filteredScores.length > 0 ? (
-              <TableContainer
-                elevation={0}
-                component={Paper}
-                sx={{ borderRadius: 2 }}
-              >
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>UID</TableCell>
-                      <TableCell>Batch</TableCell>
-                      <TableCell>Subject</TableCell>
-                      <TableCell>Start</TableCell>
-                      <TableCell>End</TableCell>
-                      <TableCell>Actions</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {filteredScores.map((score: any, index: number) => {
-                      let userData: any = {};
+          <PaginationTable
+            name={"scores"}
+            url={`/scores`}
+            placeholder="Search for Scores"
+            notFound="No Scores found"
+          >
+            {(data) => {
+              return (
+                <TableContainer
+                  elevation={0}
+                  component={Paper}
+                  sx={{ borderRadius: 2 }}
+                >
+                  <Table sx={{ width: isMobile ? "max-content" : "100%" }}>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>UID</TableCell>
+                        <TableCell>Batch</TableCell>
+                        <TableCell>Subject</TableCell>
+                        <TableCell>Start</TableCell>
+                        <TableCell>End</TableCell>
+                        <TableCell>Actions</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {data?.map((score: any, index: number) => {
+                        let userData: any = {};
 
-                      score.obtained.forEach((o: any) => {
-                        userData[o.studentId] = o.marks;
-                      });
+                        score.obtained.forEach((o: any) => {
+                          userData[o.studentId] = o.marks;
+                        });
 
-                      return (
-                        <TableRow key={index}>
-                          <TableCell>
-                            {format(parseISO(score.date), "dd MMM yyyy")}
-                          </TableCell>
-                          <TableCell>{score.title}</TableCell>
-                          <TableCell>{getSubject(score.subject)}</TableCell>
-                          <TableCell>{score.total}</TableCell>
-                          <TableCell>
-                            {score.batchIds.map((batch: any, index: number) => (
-                              <>
-                                {batch.name}{" "}
-                                {!(scores.length == index) && <br />}
-                              </>
-                            ))}
-                          </TableCell>
+                        return (
+                          <TableRow key={index}>
+                            <TableCell>
+                              {format(parseISO(score.date), "dd MMM yyyy")}
+                            </TableCell>
+                            <TableCell>{score.title}</TableCell>
+                            <TableCell>{getSubject(score.subject)}</TableCell>
+                            <TableCell>{score.total}</TableCell>
+                            <TableCell>
+                              {score.batchIds.map(
+                                (batch: any, index: number) => (
+                                  <>
+                                    {batch.name}{" "}
+                                    {!(data?.length == index) && <br />}
+                                  </>
+                                )
+                              )}
+                            </TableCell>
 
-                          <TableCell sx={{ display: "flex" }}>
-                            <ModalButton
-                              modal={
-                                <DynamicForm
-                                  fields={[
-                                    {
-                                      type: "text",
-                                      label: "Title",
-                                      name: "title",
-                                      required: true,
-                                      defaultValue: score.title,
-                                    },
-                                    {
-                                      type: "date",
-                                      label: "Date",
-                                      name: "date",
-                                      required: true,
-                                      defaultValue: defaultDate(score.date),
-                                    },
-                                    {
-                                      type: "optionSelector",
-                                      required: true,
-                                      name: "subject",
-                                      label: "Subject",
-                                      options: getAllSubjects(),
-                                      // readOnly: true,
-                                      defaultValue: score.subject
-                                    },
-                                    {
-                                      type: "number",
-                                      label: "Total",
-                                      name: "total",
-                                      required: true,
-                                      defaultValue: score.total,
-                                    },
-                                    {
-                                      type: "targetSelectorWithStudentsInput",
-                                      name: "targetWithStudents",
-                                      label: "Select Batch",
-                                      selectOnly: "batchIds",
-                                      defaultValue: {
-                                        type: "batchIds",
-                                        ids: score.batchIds.map(
-                                          (_: any) => _._id
-                                        ),
+                            <TableCell sx={{ display: "flex" }}>
+                              <ModalButton
+                                modal={
+                                  <DynamicForm
+                                    fields={[
+                                      {
+                                        type: "text",
+                                        label: "Title",
+                                        name: "title",
+                                        required: true,
+                                        defaultValue: score.title,
                                       },
-                                    },
-                                  ]}
-                                  users={userData}
-                                />
-                              }
-                              path={`/${score._id}/edit`}
-                              url={`/scores/${score._id}/edit`}
-                              title="Edit Score"
-                              button="Save"
-                              onSuccess={fetchScores}
-                              success="Saved the edited score successfully!"
-                            >
-                              <IconButton>
-                                <EditOutlined />
-                              </IconButton>
-                            </ModalButton>
-                            <ModalButton
-                              modal={<ViewSingleScore />}
-                              path={`/${score._id}`}
-                              url=""
-                              title="Score Details"
-                              button=""
-                              onSuccess={() => {}}
-                              success=""
-                            >
-                              <IconButton>
-                                <VisibilityOutlined />
-                              </IconButton>
-                            </ModalButton>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            ) : (
-              <Typography variant="body1" textAlign="center" py={4}>
-                No Schedules found.
-              </Typography>
-            )}
-          </Box>
+                                      {
+                                        type: "date",
+                                        label: "Date",
+                                        name: "date",
+                                        required: true,
+                                        defaultValue: defaultDate(score.date),
+                                      },
+                                      {
+                                        type: "optionSelector",
+                                        required: true,
+                                        name: "subject",
+                                        label: "Subject",
+                                        options: getAllSubjects(),
+                                        // readOnly: true,
+                                        defaultValue: score.subject,
+                                      },
+                                      {
+                                        type: "number",
+                                        label: "Total",
+                                        name: "total",
+                                        required: true,
+                                        defaultValue: score.total,
+                                      },
+                                      {
+                                        type: "targetSelectorWithStudentsInput",
+                                        name: "targetWithStudents",
+                                        label: "Select Batch",
+                                        selectOnly: "batchIds",
+                                        defaultValue: {
+                                          type: "batchIds",
+                                          ids: score.batchIds.map(
+                                            (_: any) => _._id
+                                          ),
+                                        },
+                                      },
+                                    ]}
+                                    users={userData}
+                                  />
+                                }
+                                path={`/${score._id}/edit`}
+                                url={`/scores/${score._id}/edit`}
+                                title="Edit Score"
+                                button="Save"
+                                onSuccess={() => {}}
+                                success="Saved the edited score successfully!"
+                              >
+                                <IconButton>
+                                  <EditOutlined />
+                                </IconButton>
+                              </ModalButton>
+                              <ModalButton
+                                modal={<ViewSingleScore />}
+                                path={`/${score._id}`}
+                                url=""
+                                title="Score Details"
+                                button=""
+                                onSuccess={() => {}}
+                                success=""
+                              >
+                                <IconButton>
+                                  <VisibilityOutlined />
+                                </IconButton>
+                              </ModalButton>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              );
+            }}
+          </PaginationTable>
         </CardContent>
       </Card>
     </Stack>

@@ -10,6 +10,8 @@ import {
   CardContent,
   Stack,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import Grid2 from "@mui/material/Unstable_Grid2/Grid2";
 import whatsappLogo from "../assets/logos/whatsapp.png";
@@ -80,7 +82,7 @@ export default function Dashboard() {
   }, []);
 
   const updateDashboard = (punchData: any) => {
-    setLogs((prevLogs) => [punchData, ...prevLogs].slice(0, 15));
+    setLogs((prevLogs) => [...punchData, ...prevLogs].slice(0, 15));
     setStats((prevStats) => {
       const newStats = { ...prevStats };
       if (punchData.status === "on time") {
@@ -98,10 +100,20 @@ export default function Dashboard() {
     fetchStatistics();
   }, []);
 
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"), {
+    noSsr: true,
+  });
+  const largeFullHeight = isMobile ? "unset" : "100%";
+
   return (
-    <Grid2 container spacing={3} sx={{ overflow: "hidden", height: "100%" }}>
-      <Grid2 xs={6} sx={{ height: "100%" }}>
-        <Stack gap={3} sx={{ height: "100%" }}>
+    <Grid2
+      container
+      spacing={3}
+      sx={{ overflow: isMobile ? "scroll" : "hidden", height: largeFullHeight }}
+    >
+      <Grid2 xs={12} sm={6} sx={{ height: largeFullHeight }}>
+        <Stack gap={3} sx={{ height: largeFullHeight }}>
           {/* WhatsApp Integration Card */}
           <Box>
             <Card elevation={0} sx={{ borderRadius: 5, bgcolor: grey[100] }}>
@@ -146,11 +158,21 @@ export default function Dashboard() {
               <Card elevation={0} sx={{ borderRadius: 5, bgcolor: grey[100] }}>
                 <CardContent>
                   <Box display={"flex"} alignItems={"center"}>
-                    <PeopleAltOutlined fontSize="large" sx={{ mr: 2 }} />
-                    <Typography fontWeight={600} flex={"1"}>
+                    <PeopleAltOutlined
+                      fontSize={isMobile ? "medium" : "large"}
+                      sx={{ mr: 2 }}
+                    />
+                    <Typography
+                      fontWeight={600}
+                      flex={"1"}
+                      variant={isMobile ? "body2" : "body1"}
+                    >
                       Present
                     </Typography>
-                    <Typography variant="h6" fontWeight={700}>
+                    <Typography
+                      variant={isMobile ? "body1" : "h6"}
+                      fontWeight={700}
+                    >
                       {stats.present}
                     </Typography>
                   </Box>
@@ -161,11 +183,21 @@ export default function Dashboard() {
               <Card elevation={0} sx={{ borderRadius: 5, bgcolor: grey[100] }}>
                 <CardContent>
                   <Box display={"flex"} alignItems={"center"}>
-                    <PersonOffOutlined fontSize="large" sx={{ mr: 2 }} />
-                    <Typography fontWeight={600} flex={"1"}>
+                    <PersonOffOutlined
+                      fontSize={isMobile ? "medium" : "large"}
+                      sx={{ mr: 2 }}
+                    />
+                    <Typography
+                      fontWeight={600}
+                      flex={"1"}
+                      variant={isMobile ? "body2" : "body1"}
+                    >
                       Absent
                     </Typography>
-                    <Typography variant="h6" fontWeight={700}>
+                    <Typography
+                      variant={isMobile ? "body1" : "h6"}
+                      fontWeight={700}
+                    >
                       {stats.absent}
                     </Typography>
                   </Box>
@@ -181,11 +213,15 @@ export default function Dashboard() {
           >
             <CardContent sx={{ p: 2, height: "100%", display: "flex", gap: 3 }}>
               <Box>
-                <Calendar />
+                <Calendar fontSize={isMobile ? "small" : "medium"} />
               </Box>
               <Box flex={"1"} display={"flex"} sx={{ flexFlow: "column" }}>
                 <Box display={"flex"} sx={{ mb: 1 }}>
-                  <Typography fontWeight={700} flex={1}>
+                  <Typography
+                    fontWeight={700}
+                    flex={1}
+                    variant={isMobile ? "body2" : "body1"}
+                  >
                     Holiday For :
                   </Typography>
                   <Typography fontWeight={700} variant="h6">
@@ -207,11 +243,13 @@ export default function Dashboard() {
                         <Typography fontWeight={600}>
                           {user.name}&nbsp;
                         </Typography>
-                        <Typography variant="caption">{`(${user.uid})`}</Typography>
+                        <Typography variant="caption">{`(${user.cardUid})`}</Typography>
                         <Box flex={1} />
-                        <Typography>
-                          by {Math.random() >= 0.5 ? "User ID" : "Batch ID"}
-                        </Typography>
+                        {!isMobile && (
+                          <Typography>
+                            by {Math.random() >= 0.5 ? "User ID" : "Batch ID"}
+                          </Typography>
+                        )}
                       </Box>
                     ))
                   ) : (
@@ -226,8 +264,7 @@ export default function Dashboard() {
         </Stack>
       </Grid2>
 
-      {/* Realtime Attendance Logs */}
-      <Grid2 xs={6} sx={{ height: "100%" }}>
+      <Grid2 xs={12} sm={6} sx={{ height: "100%" }}>
         <Box
           display={"flex"}
           sx={{
@@ -248,18 +285,20 @@ export default function Dashboard() {
           </Box>
           <Stack flex={1} gap={2} sx={{ py: 1, overflowY: "auto" }}>
             {logs.length > 0 ? (
-              logs.map((log, index) => (
-                <Box key={index} display={"flex"} alignItems={"center"}>
-                  <Box>
-                    <Typography fontWeight={600}>{log.name}</Typography>
-                    <Typography variant="caption">{log.uid}</Typography>
+              <Box>
+                {logs.map((log, index) => (
+                  <Box key={index} display={"flex"} alignItems={"center"}>
+                    <Box>
+                      <Typography fontWeight={600}>{log.name}</Typography>
+                      <Typography variant="caption">{log.uid}</Typography>
+                    </Box>
+                    <Box flex={1} />
+                    <Typography fontWeight={500} variant="h6">
+                      {log.time}
+                    </Typography>
                   </Box>
-                  <Box flex={1} />
-                  <Typography fontWeight={500} variant="h6">
-                    {log.time}
-                  </Typography>
-                </Box>
-              ))
+                ))}
+              </Box>
             ) : (
               <Typography variant="body2">
                 No attendance logs available

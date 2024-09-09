@@ -9,22 +9,24 @@ router.post("/", async (req, res) => {
     const batch = new Batch({ name: req.body.name });
     await batch.save();
     const users =
-      typeof req.body.userIds === "string"
+      typeof req.body.userIds === "undefined"
+        ? undefined
+        : typeof req.body.userIds === "string"
         ? [req.body.userIds]
         : req.body.userIds;
 
-    for (const user of users) {
-      console.log(user);
-      const userRef = await User.findById(user);
-      console.log(userRef);
-      if (userRef?.role == "student") {
-        userRef.batchIds = [batch._id];
+    if (users) {
+      for (const user of users) {
+        const userRef = await User.findById(user);
+        console.log(userRef);
+        if (userRef?.role == "student") {
+          userRef.batchIds = [batch._id];
+        }
+        if (userRef?.role == "faculty") {
+          userRef.batchIds = [...userRef.batchIds, batch._id];
+        }
+        await userRef?.save();
       }
-      if (userRef?.role == "faculty") {
-        userRef.batchIds = [...userRef.batchIds, batch._id];
-      }
-      await userRef?.save();
-      console.log(userRef);
     }
     res.status(201).json({
       success: true,
@@ -38,8 +40,29 @@ router.post("/", async (req, res) => {
 
 // Get All Batches
 router.get("/", async (req, res) => {
+  const { page = 1, rows = 10, search = "" } = req.query;
+  const pageNumber = parseInt(page as string);
+  const limitNumber = parseInt(rows as string);
+
   try {
-    const batches = await Batch.find({ deleted: false });
+    const query: any = { deleted: false };
+
+    if (search) {
+      query.$or = [
+        { total: { $regex: search, $options: "i" } },
+        { subject: { $regex: search, $options: "i" } },
+        { title: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const count = await Batch.countDocuments(query);
+    const pages = Math.ceil(count / limitNumber);
+
+    const batches = await Batch.find(query)
+      .sort({ timestamp: -1 })
+      .skip((pageNumber - 1) * limitNumber)
+      .limit(limitNumber);
+
     const BATCHES = await Promise.all(
       batches.map(async (batch) => ({
         ...batch.toJSON(),
@@ -55,7 +78,16 @@ router.get("/", async (req, res) => {
         }).populate("batchIds"),
       }))
     );
-    res.json({ success: true, data: { batches: BATCHES } });
+    res.json({
+      success: true,
+      data: { batches: BATCHES },
+      pagination: {
+        current: pageNumber,
+        total: pages,
+        rows: limitNumber,
+        count,
+      },
+    });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }

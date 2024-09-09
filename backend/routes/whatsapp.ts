@@ -1208,6 +1208,6 @@ async function saveLog(logMessage: string) {
 //   }
 // }, 2000);
 
-init();
+// init();
 
 export default router;

@@ -38,6 +38,7 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  SwipeableDrawer,
   Toolbar,
   Typography,
 } from "@mui/material";
@@ -88,7 +89,11 @@ type SideBarItem =
   | SideBarLogout
   | SideBarChildren;
 
-export default function SideBar() {
+export default function SideBar({
+  openState,
+}: {
+  openState: [boolean, React.Dispatch<React.SetStateAction<boolean>>];
+}) {
   const drawerWidth = 240;
   const SideBarItems: SideBarItem[] = [
     {
@@ -153,7 +158,7 @@ export default function SideBar() {
     { type: "logout" },
   ];
 
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = openState;
   const [isClosing, setIsClosing] = useState(false);
 
   const navigate = useNavigate();
@@ -161,6 +166,10 @@ export default function SideBar() {
   const handleDrawerClose = () => {
     setIsClosing(true);
     setMobileOpen(false);
+  };
+
+  const handleDrawerOpen = () => {
+    setMobileOpen(true);
   };
 
   const handleDrawerTransitionEnd = () => {
@@ -205,7 +214,7 @@ export default function SideBar() {
     <Box>
       <Toolbar>XYZ Classes</Toolbar>
       <Divider />
-      <List>
+      <List onClick={handleDrawerClose}>
         {SideBarItems.map((item, i) => {
           switch (item.type) {
             case "link":
@@ -231,12 +240,14 @@ export default function SideBar() {
               return <ListItem sx={{ height: "8px" }} />;
             case "logout":
               return (
-                <ListItem key={i} disablePadding sx={{color: red[900]}}>
+                <ListItem key={i} disablePadding sx={{ color: red[900] }}>
                   <ListItemButton>
                     <ListItemIcon>
-                      <Logout sx={{color: red[900]}} />
+                      <Logout sx={{ color: red[900] }} />
                     </ListItemIcon>
-                    <ListItemText primary={<Typography fontWeight={600}>Logout</Typography>} />
+                    <ListItemText
+                      primary={<Typography fontWeight={600}>Logout</Typography>}
+                    />
                   </ListItemButton>
                 </ListItem>
               );
@@ -253,11 +264,12 @@ export default function SideBar() {
       sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
       aria-label="mailbox folders"
     >
-      <Drawer
+      <SwipeableDrawer
         variant="temporary"
         open={mobileOpen}
         onTransitionEnd={handleDrawerTransitionEnd}
         onClose={handleDrawerClose}
+        onOpen={handleDrawerOpen}
         ModalProps={{
           keepMounted: true,
         }}
@@ -267,7 +279,7 @@ export default function SideBar() {
         }}
       >
         {drawer}
-      </Drawer>
+      </SwipeableDrawer>
       <Drawer
         variant="permanent"
         sx={{
@@ -279,69 +291,5 @@ export default function SideBar() {
         {drawer}
       </Drawer>
     </Box>
-  );
-
-  return (
-    <div className=" border p-2 overflow-auto">
-      <ul>
-        {SideBarItems.map((item, i) => {
-          switch (item.type) {
-            case "brand":
-              return (
-                <li key={i}>
-                  <Link to={"/"}>
-                    <div>
-                      <img src={item.image[0]} alt={item.image[1]} />
-                      <p className=" font-bold text-xl">{item.name}</p>
-                    </div>
-                  </Link>
-                </li>
-              );
-            case "link":
-              return (
-                <li
-                  key={i}
-                  className={`py-2 px-4 border ${
-                    item.disabled && "opacity-50"
-                  }`}
-                >
-                  <Link to={item.disabled ? "javascript:void(0)" : item.url}>
-                    {item.icon}
-                    <p>{item.label}</p>
-                  </Link>
-                </li>
-              );
-            case "divider":
-              return (
-                <li key={i}>
-                  <hr />
-                </li>
-              );
-            case "category":
-              return (
-                <li key={i}>
-                  <pre>{item.text}</pre>
-                </li>
-              );
-            case "space":
-              return (
-                <li key={i}>
-                  <div style={{ height: 8, width: "100%" }}> </div>
-                </li>
-              );
-            case "logout":
-              return (
-                <li style={{ color: "red" }} key={i}>
-                  <Link to={"/logout"}>
-                    icon
-                    <p>Logout</p>
-                  </Link>
-                </li>
-              );
-          }
-          return <></>;
-        })}
-      </ul>
-    </div>
   );
 }

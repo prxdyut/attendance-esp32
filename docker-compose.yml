@@ -8,14 +8,14 @@ services:
     ports:
       - "4444:3000"
       - "4000:4000"
-    # volumes:
-      # - /app/node_modules
-      # - ./prod/backend:/app
     environment:
       - CHROME_PATH=/usr/bin/google-chrome-stable
       - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
       - ENV=production
       - MONGODB_URI=mongodb://mongo:27017
+    # volumes:                   
+    #   - ./backend:/app
+    #   - ./browserData:/app/browserData
     tmpfs:
       - /tmp/chrome-user-data
     depends_on:
@@ -24,21 +24,34 @@ services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     ports:
       - "4445:5173"
-    # volumes:
-      # - ./prod/frontend:/app
+    # volumes: 
+    #   - ./frontend:/app
     environment:
       - NODE_ENV=production
 
   mongo:
     image: mongo:latest
     ports:
-      - "22222:27017"
+      - "4446:27017"
     volumes:          
       - ./mongodb/data:/data
     command: mongod --bind_ip_all
+
+    
+  minio:
+    image: minio/minio
+    ports:
+      - "4447:9000"
+      - "4448:9001"
+    volumes:
+      - ./minio:/data
+    environment:
+      MINIO_ROOT_USER: pradyut
+      MINIO_ROOT_PASSWORD: pradyut2006
+    command: server --console-address ":9001" /data
 
   nginx:
     image: nginx:latest
