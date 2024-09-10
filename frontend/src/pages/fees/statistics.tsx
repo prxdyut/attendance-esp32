@@ -122,7 +122,8 @@ export const FeeStatistics = () => {
             url={`/fees`}
             placeholder="Search for Users"
             notFound="No Users found"
-            noDateRange
+            hasSearchFilter
+            hasBatchFilter
           >
             {(data) => {
               return (

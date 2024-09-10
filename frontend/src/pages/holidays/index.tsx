@@ -75,8 +75,11 @@ function Holidays() {
           <PaginationTable
             name={"holidays"}
             url={`/holidays`}
-            placeholder="Search for Scores"
-            notFound="No Scores found"
+            placeholder="Search for Event"
+            notFound="No Holidays found"
+            hasSearchFilter
+            hasDateFilter
+            hasTargetSelector
           >
             {(data) => (
               <TableContainer

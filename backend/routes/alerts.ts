@@ -3,6 +3,7 @@
 import express from "express";
 import { Alert, User } from "../mongodb/models";
 import { endOfDay, startOfDay } from "date-fns";
+import { roundToNearestHours } from "date-fns/fp/roundToNearestHours";
 
 const router = express.Router();
 
@@ -19,7 +20,15 @@ router.post("/", async (req, res) => {
 
 // Get all alerts
 router.get("/", async (req, res) => {
-  const { startDate, endDate, page = 1, rows = 10, search = "" } = req.query;
+  const {
+    startDate,
+    endDate,
+    page = 1,
+    rows = 10,
+    search = "",
+    selectionType,
+    selectedIds = "",
+  } = req.query;
   const pageNumber = parseInt(page as string);
   const limitNumber = parseInt(rows as string);
 
@@ -41,6 +50,17 @@ router.get("/", async (req, res) => {
       ];
     }
 
+    if (
+      selectedIds &&
+      (selectionType == "batchIds" || selectionType == "userIds")
+    ) {
+      query[selectionType] = {
+        $in: (selectedIds as string).split(",").filter(Boolean),
+      };
+    } else if (selectionType == "all") {
+      query.all = true;
+    }
+
     const count = await Alert.countDocuments(query);
     const pages = Math.ceil(count / limitNumber);
 
@@ -53,7 +73,7 @@ router.get("/", async (req, res) => {
 
     res.json({
       success: true,
-      data: {alerts},
+      data: { alerts },
       pagination: {
         current: pageNumber,
         total: pages,

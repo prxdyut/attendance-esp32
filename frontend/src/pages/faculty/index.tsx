@@ -98,7 +98,8 @@ const Faculty = () => {
             query="role=faculty"
             placeholder="Search for Faculties"
             notFound="No Faculties found"
-            noDateRange
+            hasSearchFilter
+            hasBatchFilter
           >
             {(data) => {
               return (

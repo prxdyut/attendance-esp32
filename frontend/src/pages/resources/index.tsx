@@ -94,6 +94,8 @@ export const ResourceList = () => {
             url={`/resources`}
             placeholder="Search for Resources"
             notFound="No Resources found"
+            hasSearchFilter
+            hasTargetSelector
           >
             {(data) => (
               <TableContainer

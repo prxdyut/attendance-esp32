@@ -81,6 +81,9 @@ export const AlertList: React.FC = () => {
             url={`/alerts`}
             placeholder="Search for Alerts"
             notFound="No Alerts found"
+            hasSearchFilter
+            hasDateFilter
+            hasTargetSelector
           >
             {(data) => (
               <TableContainer
@@ -94,7 +97,7 @@ export const AlertList: React.FC = () => {
                       <TableCell>UID</TableCell>
                       <TableCell>Date</TableCell>
                       <TableCell>Title</TableCell>
-                      <TableCell>Messages</TableCell>
+                      <TableCell>Message</TableCell>
                       <TableCell>Target</TableCell>
                       <TableCell>Actions</TableCell>
                     </TableRow>

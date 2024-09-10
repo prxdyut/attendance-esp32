@@ -84,7 +84,7 @@ export default function Batches() {
             url={`/batches`}
             placeholder="Search for Scores"
             notFound="No Scores found"
-            noDateRange
+            hasSearchFilter
           >
             {(data) => {
               return (

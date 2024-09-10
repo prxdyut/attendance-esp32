@@ -39,8 +39,10 @@ export function Presentees() {
           <PaginationTable
             name={"presentees"}
             url={`/attendance/presentees`}
-            placeholder="Search for Scores"
-            notFound="No Scores found"
+            placeholder="Search for Person"
+            notFound="No Presentees found"
+            hasTargetSelector
+            hasDateFilter
           >
             {(data) => (
               <TableContainer

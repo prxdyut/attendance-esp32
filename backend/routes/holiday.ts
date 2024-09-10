@@ -41,9 +41,15 @@ router.post("/", async (req, res) => {
 
 // Get all holidays
 router.get("/", async (req, res) => {
-  const { startDate, endDate, page = 1, rows = 10, search = "" } = req.query;
-  const start = startOfDay(startDate as string);
-  const end = endOfDay(endDate as string);
+  const {
+    startDate,
+    endDate,
+    page = 1,
+    rows = 10,
+    search = "",
+    selectionType,
+    selectedIds,
+  } = req.query;
   const pageNumber = parseInt(page as string);
   const limitNumber = parseInt(rows as string);
 
@@ -51,9 +57,7 @@ router.get("/", async (req, res) => {
     const query: any = {};
 
     if (search) {
-      query.$or = [
-        { event: { $regex: search, $options: "i" } },
-      ];
+      query.$or = [{ event: { $regex: search, $options: "i" } }];
     }
 
     if (startDate && endDate) {
@@ -61,6 +65,17 @@ router.get("/", async (req, res) => {
         $gte: startOfDay(new Date(startDate as string)),
         $lte: endOfDay(new Date(endDate as string)),
       };
+    }
+
+    if (
+      selectedIds &&
+      (selectionType == "batchIds" || selectionType == "userIds")
+    ) {
+      query[selectionType] = {
+        $in: (selectedIds as string).split(",").filter(Boolean),
+      };
+    } else if (selectionType == "all") {
+      query.all = true;
     }
 
     const count = await Holiday.countDocuments(query);

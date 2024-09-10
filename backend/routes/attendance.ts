@@ -61,8 +61,8 @@ router.get("/presentees", async (req, res) => {
   try {
     const { 
       startDate, 
-      endDate, 
-      selectionType = "all", 
+      endDate,
+      selectionType = "all",
       selectedIds,
       page = 1,
       rows = 10
@@ -80,6 +80,8 @@ router.get("/presentees", async (req, res) => {
       startDate as string,
       endDate as string
     );
+
+    console.log(selectedIds, selectionType, userIds)
 
     const query: any = {
       userId: { $in: userIds },

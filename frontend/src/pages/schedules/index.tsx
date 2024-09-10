@@ -1,18 +1,13 @@
 // components/LectureScheduler.js
-import React, { useState, useEffect } from "react";
-import { handleFetch } from "../../utils/handleFetch";
-import { endOfMonth, format, parseISO, startOfMonth } from "date-fns";
-import { Edit, Search } from "lucide-react";
+import React from "react";
+import { format, parseISO } from "date-fns";
+import { Edit } from "lucide-react";
 import {
   Box,
   Button,
   Card,
   CardContent,
-  CircularProgress,
-  FormControl,
   IconButton,
-  InputAdornment,
-  OutlinedInput,
   Paper,
   Stack,
   Table,
@@ -26,20 +21,12 @@ import {
   useTheme,
 } from "@mui/material";
 import { grey } from "@mui/material/colors";
-import { DateRangeSelector } from "../../components/DateRangeSelector";
-import {
-  Add,
-  ControlPointDuplicate,
-  Delete,
-  Person,
-  School,
-} from "@mui/icons-material";
+import { Add, ControlPointDuplicate, Delete } from "@mui/icons-material";
 import ModalButton from "../../components/ModalForm";
 import DynamicForm, {
   defaultDate,
   defaultTime,
 } from "../../components/DynamicForm";
-import { Link, useLocation } from "react-router-dom";
 import PaginationTable from "../../components/PaginationTable";
 
 export default function Schedule() {
@@ -115,8 +102,11 @@ export default function Schedule() {
             <PaginationTable
               name={"schedules"}
               url={`/schedules`}
-              placeholder="Search for Schedules"
+              placeholder="Search for Subject"
               notFound="No Schedules found"
+              hasDateFilter
+              hasSearchFilter
+              hasBatchFilter
             >
               {(data) => {
                 return (

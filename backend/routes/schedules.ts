@@ -15,6 +15,7 @@ router.get("/", async (req, res) => {
       page = 1,
       rows = 10,
       search = "",
+      selectedIds = "",
     } = req.query;
     const pageNumber = parseInt(page as string);
     const limitNumber = parseInt(rows as string);
@@ -31,6 +32,12 @@ router.get("/", async (req, res) => {
 
     if (batchId) {
       query.batchId = batchId;
+    }
+
+    if (selectedIds) {
+      query.batchIds = {
+        $in: (selectedIds as string).split(","),
+      };
     }
 
     if (search) {

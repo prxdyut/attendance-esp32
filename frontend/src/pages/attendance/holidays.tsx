@@ -55,7 +55,9 @@ export function HolidayFor() {
             name={"holidayFor"}
             url={`/statistics/holidayFor`}
             placeholder="Search for Scores"
-            notFound="No Scores found"
+            notFound="No Holidays found"
+            hasPersonFilter
+            hasDateFilter
           >
             {(data) => (
               <TableContainer

@@ -7,11 +7,15 @@ import {
   FormControl,
   InputAdornment,
   OutlinedInput,
+  Stack,
   TablePagination,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import { Search } from "@mui/icons-material";
 import { DateRangeSelector } from "./DateRangeSelector";
+import { TargetSelector } from "./SelectTarget";
 
 type Props = {
   name: string;
@@ -22,7 +26,9 @@ type Props = {
   hasSearchFilter?: boolean;
   hasDateFilter?: boolean;
   hasBatchFilter?: boolean;
-  noDateRange?: boolean;
+  hasPersonFilter?: boolean;
+  hasDateRange?: boolean;
+  hasTargetSelector?: boolean;
   children: (data: any[]) => ReactNode;
 };
 
@@ -32,7 +38,7 @@ const isNotFalse = (bool?: boolean) => {
 };
 
 export default function PaginationTable(props: Props) {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [data, setData] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
   const dateRangeState = useState<[string, string]>([
@@ -51,6 +57,8 @@ export default function PaginationTable(props: Props) {
     count: 0,
   });
   const [dateRange] = dateRangeState;
+  const [selectionType, setSelectionType] = useState("");
+  const [selectedIds, setSelectedIds] = useState([]);
 
   const handleChangePage = (
     event: React.MouseEvent<HTMLButtonElement> | null,
@@ -71,9 +79,11 @@ export default function PaginationTable(props: Props) {
 
   const fetchData = useCallback(() => {
     handleFetch(
-      `${props.url}?startDate=${dateRange[0]}&endDate=${
-        dateRange[1]
-      }&search=${searchTerm}&${props?.query ? props.query : ""}`,
+      `${props.url}?startDate=${dateRange[0]}&endDate=${dateRange[1]}${
+        searchTerm ? "&search=" + searchTerm : ""
+      }${selectionType ? "&selectionType=" + selectionType : ""}${
+        selectedIds ? "&selectedIds=" + selectedIds.join(",") : ""
+      }&${props?.query ? props.query : ""}`,
       setLoading,
       setData,
       console.error,
@@ -85,12 +95,20 @@ export default function PaginationTable(props: Props) {
         },
       }
     );
-  }, [props.url, dateRange, searchTerm, pagination.current, pagination.rows]);
+  }, [
+    props.url,
+    dateRange,
+    searchTerm,
+    pagination.current,
+    pagination.rows,
+    selectionType,
+    selectedIds,
+  ]);
 
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
       fetchData();
-    }, 300); // 300ms delay
+    }, 1000); // 300ms delay
 
     return () => clearTimeout(debounceTimer);
   }, [fetchData]);
@@ -103,6 +121,16 @@ export default function PaginationTable(props: Props) {
   // @ts-ignore
   const filteredData = data?.[props.name];
   console.log(data);
+  const handleSelectionChange = (newType: any, newIds: any) => {
+    newIds.length ? setSelectionType(newType) : setSelectionType("");
+    setSelectedIds(newIds);
+  };
+
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"), {
+    noSsr: true,
+  });
+
   return (
     <Box
       display={"flex"}
@@ -111,7 +139,7 @@ export default function PaginationTable(props: Props) {
       sx={{ width: "100%" }}
     >
       <Box display={"flex"} gap={2} flexDirection={"column"} alignItems={"end"}>
-        {isNotFalse(props.hasSearchFilter) && (
+        {props.hasSearchFilter && (
           <FormControl fullWidth>
             <OutlinedInput
               placeholder={props.placeholder}
@@ -126,7 +154,30 @@ export default function PaginationTable(props: Props) {
             />
           </FormControl>
         )}
-        {!props.noDateRange && <DateRangeSelector state={dateRangeState} />}
+        <Stack direction={isMobile ? "column" : "row"} spacing={2}>
+          {props.hasDateFilter && <DateRangeSelector state={dateRangeState} />}
+          {(props.hasTargetSelector ||
+            props.hasBatchFilter ||
+            props.hasPersonFilter) && (
+            <TargetSelector
+              selectOnly={
+                props.hasBatchFilter
+                  ? "batchIds"
+                  : props.hasPersonFilter
+                  ? "userIds"
+                  : undefined
+              }
+              label={
+                props.hasBatchFilter
+                  ? "Select Batches"
+                  : props.hasPersonFilter
+                  ? "Select Person"
+                  : undefined
+              }
+              onSelectionChange={handleSelectionChange}
+            />
+          )}
+        </Stack>
       </Box>
       <Box>
         {loading ? (

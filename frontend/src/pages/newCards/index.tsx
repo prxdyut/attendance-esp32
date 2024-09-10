@@ -46,6 +46,8 @@ export default function NewCards() {
             url={"/punches/new"}
             placeholder="Search for new Cards"
             notFound="No cards found"
+            hasDateFilter
+            hasSearchFilter
           >
             {(data) => {
               return (

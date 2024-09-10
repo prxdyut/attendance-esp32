@@ -32,19 +32,24 @@ router.post("/", async (req, res) => {
 });
 
 router.get("/", async (req, res) => {
-  const { startDate, endDate, page = 1, rows = 10, search = "" } = req.query;
-  const pageNumber = parseInt(page as string);
-  const limitNumber = parseInt(rows as string);
+  const { startDate, endDate, page = 1, rows = 10, search = "", selectedIds = "" } = req.query;
+  const pageNumber = parseInt(page as string) || 1;
+  const limitNumber = parseInt(rows as string) || 10;
 
   try {
     const query: any = {};
 
     if (search) {
       query.$or = [
-        { total: { $regex: search, $options: "i" } },
         { subject: { $regex: search, $options: "i" } },
         { title: { $regex: search, $options: "i" } },
       ];
+    }
+
+    if (selectedIds) {
+      query.batchIds = {
+        $in: (selectedIds as string).split(",").filter(Boolean), // Filter out empty values
+      };
     }
 
     if (startDate && endDate) {
@@ -53,6 +58,8 @@ router.get("/", async (req, res) => {
         $lte: endOfDay(new Date(endDate as string)),
       };
     }
+
+    console.log("Query:", query); // Log query for debugging
 
     const count = await Score.countDocuments(query);
     const pages = Math.ceil(count / limitNumber);
@@ -79,6 +86,7 @@ router.get("/", async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
+
 
 router.get("/statistics", async (req, res) => {
   try {

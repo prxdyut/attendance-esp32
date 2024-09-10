@@ -22,10 +22,13 @@ import {
   TableRow,
   Paper,
   IconButton,
+  useTheme,
+  useMediaQuery,
 } from "@mui/material";
 import { grey } from "@mui/material/colors";
 import { DateRangeSelector } from "../../components/DateRangeSelector";
 import { getSubject } from "../../utils/subjectsActions";
+import PaginationTable from "../../components/PaginationTable";
 
 export default function UserData() {
   const [loading, setLoading] = useState(false);
@@ -34,45 +37,21 @@ export default function UserData() {
     punches: [],
     scores: [],
   });
-  const [searchTerm, setSearchTerm] = useState("");
   const id = useParams().id;
-  const dateRangeState = useState<[string, string]>([
-    format(startOfMonth(new Date()), "yyyy-MM-dd"),
-    format(endOfMonth(new Date()), "yyyy-MM-dd"),
-  ]);
-  const [dateRange] = dateRangeState;
-
-  console.log(data);
   useEffect(() => {
     handleFetch(
-      `/users/data/?userId=${id}&startDate=${dateRange[0]}&endDate=${dateRange[1]}`,
+      `/users/data/?userId=${id}`,
       setLoading,
       setData,
       console.error
     );
-  }, [id, ...dateRange]);
+  }, [id]);
+  
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"), {
+    noSsr: true,
+  });
 
-  const filteredPunches = data?.punches?.filter((punch: any) =>
-    format(punch.timestamp, "do MMMM yyyy hh:mm a").includes(
-      searchTerm.toLowerCase()
-    )
-  );
-
-  const filteredScores = data?.scores?.filter((score: any) =>
-    (
-      format(parseISO(score.date), "dd MMM yyyy") +
-      " " +
-      score.title +
-      " " +
-      score.subject +
-      " " +
-      score.total +
-      " " +
-      score.batchIds.map((batch: any) => batch.name).join(" ")
-    )
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase())
-  );
   return (
     <Stack sx={{ height: "100%", flexFlow: "column" }} gap={2}>
       <Box display={"flex"} justifyContent="space-between" alignItems="center">
@@ -122,43 +101,32 @@ export default function UserData() {
       </Box>
       <Card elevation={0} sx={{ borderRadius: 5, bgcolor: grey[100] }}>
         <CardContent sx={{ display: "flex", flexFlow: "column", gap: 3 }}>
-          <Box display={"flex"} gap={3}>
-            <FormControl fullWidth>
-              <OutlinedInput
-                placeholder="Search Score"
-                sx={{ borderRadius: 2.5, bgcolor: "white" }}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                startAdornment={
-                  <InputAdornment position="start">
-                    <Search />
-                  </InputAdornment>
-                }
-              />
-            </FormControl>
-            <DateRangeSelector state={dateRangeState} />
-          </Box>
-          <Box>
-            {loading ? (
-              <Box
-                display="flex"
-                justifyContent="center"
-                alignItems="center"
-                py={8}
+              <PaginationTable
+                name={"punches"}
+                url={`/users/data/`}
+                query={`userId=${id}&punches=true`}
+                placeholder="Search for Subject or Title"
+                notFound="No Scores found"
+                hasDateFilter
+                
               >
-                <CircularProgress />
-              </Box>
-            ) : filteredPunches.length > 0 ? (
-              <TableContainer component={Paper}>
-                <Table sx={{ minWidth: 650 }} aria-label="Facultys table">
-                  <TableHead>
+                {(data) => {
+                  return (
+                    <TableContainer
+                      elevation={0}
+                      component={Paper}
+                      sx={{ borderRadius: 2 }}
+                    >
+                      <Table sx={{ width: isMobile ? "max-content" : "100%" }}>
+
+                      <TableHead>
                     <TableRow>
                       <TableCell>Date</TableCell>
                       <TableCell>Time</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {filteredPunches.map((punch: any) => (
+                    {data.map((punch: any) => (
                       <TableRow
                         key={punch._id}
                         sx={{
@@ -174,14 +142,11 @@ export default function UserData() {
                       </TableRow>
                     ))}
                   </TableBody>
-                </Table>
-              </TableContainer>
-            ) : (
-              <Typography variant="body1" textAlign="center" py={4}>
-                No Punches found.
-              </Typography>
-            )}
-          </Box>
+                      </Table>
+                    </TableContainer>
+                  );
+                }}
+              </PaginationTable>
         </CardContent>
       </Card>
       {data?.userData?.role == "student" && (
@@ -191,81 +156,54 @@ export default function UserData() {
           </Box>
           <Card elevation={0} sx={{ borderRadius: 5, bgcolor: grey[100] }}>
             <CardContent sx={{ display: "flex", flexFlow: "column", gap: 3 }}>
-              <Box display={"flex"} gap={3}>
-                <FormControl fullWidth>
-                  <OutlinedInput
-                    placeholder="Search Score"
-                    sx={{ borderRadius: 2.5, bgcolor: "white" }}
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    startAdornment={
-                      <InputAdornment position="start">
-                        <Search />
-                      </InputAdornment>
-                    }
-                  />
-                </FormControl>
-                <DateRangeSelector state={dateRangeState} />
-              </Box>
-              <Box>
-                {loading ? (
-                  <Box
-                    display="flex"
-                    justifyContent="center"
-                    alignItems="center"
-                    py={8}
-                  >
-                    <CircularProgress />
-                  </Box>
-                ) : filteredScores.length > 0 ? (
-                  <TableContainer
-                    elevation={0}
-                    component={Paper}
-                    sx={{ borderRadius: 2 }}
-                  >
-                    <Table>
-                      <TableHead>
-                        <TableRow>
-                          <TableCell>UID</TableCell>
-                          <TableCell>Batch</TableCell>
-                          <TableCell>Subject</TableCell>
-                          <TableCell>Start</TableCell>
-                          <TableCell>End</TableCell>
-                          <TableCell>Actions</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {filteredScores.map((score: any, index: number) => {
-                          return (
-                            <TableRow key={index}>
-                              <TableCell>
-                                {format(parseISO(score.date), "dd MMM yyyy")}
-                              </TableCell>
-                              <TableCell>{score.title}</TableCell>
-                              <TableCell>{getSubject(score.subject)}</TableCell>
-                              <TableCell>{score.total}</TableCell>
-                              <TableCell>{score.marks}</TableCell>
-                              <TableCell>
-                                {score.batchIds.map(
-                                  (batch: any, index: number) => (
-                                    <>
-                                      {batch.name} {<br />}
-                                    </>
-                                  )
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                ) : (
-                  <Typography variant="body1" textAlign="center" py={4}>
-                    No Scores found.
-                  </Typography>
-                )}
-              </Box>
+              <PaginationTable
+                name={"scores"}
+                url={`/users/data/`}
+                query={`userId=${id}&scores=true`}
+                placeholder="Search for Subject or Title"
+                notFound="No Scores found"
+                hasDateFilter
+                hasSearchFilter
+              >
+                {(data) => {
+                  return (
+                    <TableContainer
+                      elevation={0}
+                      component={Paper}
+                      sx={{ borderRadius: 2 }}
+                    >
+                      <Table sx={{ width: isMobile ? "max-content" : "100%" }}>
+                        <TableHead>
+                          <TableRow>
+                            <TableCell>Date</TableCell>
+                            <TableCell>Title</TableCell>
+                            <TableCell>Subject</TableCell>
+                            <TableCell>Total</TableCell>
+                            <TableCell>Obtained</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {data.map((score: any, index: number) => {
+                            return (
+                              <TableRow key={index}>
+                                <TableCell>
+                                  {format(parseISO(score.date), "dd MMM yyyy")}
+                                </TableCell>
+                                <TableCell>{score.title}</TableCell>
+                                <TableCell>
+                                  {getSubject(score.subject)}
+                                </TableCell>
+                                <TableCell>{score.total}</TableCell>
+                                <TableCell>{score.marks}</TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  );
+                }}
+              </PaginationTable>
             </CardContent>
           </Card>
         </>

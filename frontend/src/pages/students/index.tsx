@@ -99,7 +99,8 @@ const Students = () => {
             query={"role=student"}
             placeholder="Search for Scores"
             notFound="No Scores found"
-            noDateRange
+            hasSearchFilter
+            hasBatchFilter
           >
             {(data) => {
               return (

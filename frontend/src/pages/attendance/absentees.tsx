@@ -1,16 +1,8 @@
-import React, { useState, useEffect } from "react";
-import { handleFetch } from "../../utils/handleFetch";
-import { format, subDays, parseISO } from "date-fns";
-import { TargetSelector } from "../../components/SelectTarget";
+import { format, parseISO } from "date-fns";
 import {
   Box,
   Card,
-  CardContent,
-  CircularProgress,
-  FormControl,
-  InputAdornment,
-  OutlinedInput,
-  Paper,
+  CardContent, Paper,
   Stack,
   Table,
   TableBody,
@@ -20,11 +12,9 @@ import {
   TableRow,
   Typography,
   useMediaQuery,
-  useTheme,
+  useTheme
 } from "@mui/material";
-import { Search } from "@mui/icons-material";
 import { grey } from "@mui/material/colors";
-import { DateRangeSelector } from "../../components/DateRangeSelector";
 import PaginationTable from "../../components/PaginationTable";
 
 interface Absentee {
@@ -52,8 +42,11 @@ export function Absentees() {
           <PaginationTable
             name={"absentees"}
             url={`/attendance/absentees`}
-            placeholder="Search for Scores"
-            notFound="No Scores found"
+            placeholder="Search for Person"
+            notFound="No Absentees found"
+            hasTargetSelector
+            
+            hasDateFilter
           >
             {(data) => (
               <TableContainer

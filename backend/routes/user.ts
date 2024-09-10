@@ -28,7 +28,13 @@ router.post("/", async (req, res) => {
 });
 
 router.get("/", async (req, res) => {
-  const { role, page = 1, rows = 10, search = "" } = req.query;
+  const {
+    role,
+    page = 1,
+    rows = 10,
+    search = "",
+    selectedIds = "",
+  } = req.query;
   const pageNumber = parseInt(page as string);
   const limitNumber = parseInt(rows as string);
 
@@ -37,10 +43,16 @@ router.get("/", async (req, res) => {
 
     if (search) {
       query.$or = [
-        { total: { $regex: search, $options: "i" } },
-        { subject: { $regex: search, $options: "i" } },
-        { title: { $regex: search, $options: "i" } },
+        { name: { $regex: search, $options: "i" } },
+        { phone: { $regex: search, $options: "i" } },
+        { cardUid: { $regex: search, $options: "i" } },
       ];
+    }
+
+    if (selectedIds as string) {
+      query.batchIds = {
+        $in: (selectedIds as string).split(","),
+      };
     }
 
     if (role) query.role = [role];
@@ -71,7 +83,19 @@ router.get("/", async (req, res) => {
 });
 
 router.get("/data", async (req, res) => {
-  const { userId, startDate, endDate } = req.query;
+  let {
+    userId,
+    startDate,
+    endDate,
+    punches,
+    scores,
+    page = 1,
+    rows = 10,
+    search = "",
+  } = req.query;
+
+  const pageNumber = parseInt(page as string) || 1;
+  const limitNumber = parseInt(rows as string) || 10;
 
   try {
     const user = await User.findOne({ _id: userId }).populate("batchIds");
@@ -79,21 +103,55 @@ router.get("/data", async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    const punches = await Punch.find({
-      userId: user._id,
-      timestamp: {
-        $gte: new Date(startDate as string),
-        $lte: addDays(endDate as string, 1),
-      },
-    }).sort({ timestamp: 1 });
+    let count = 0;
+    let pages = 0;
 
-    // Find all scores where the student's ID is in the obtained array
-    const scores = await Score.find({
+    if (punches) {
+      count = await Punch.countDocuments({
+        userId: user._id,
+        timestamp: {
+          $gte: new Date(startDate as string),
+          $lte: addDays(endDate as string, 1),
+        },
+      });
+      pages = Math.ceil(count / limitNumber);
+    }
+    const punchesData = punches
+      ? await Punch.find({
+          userId: user._id,
+          timestamp: {
+            $gte: new Date(startDate as string),
+            $lte: addDays(endDate as string, 1),
+          },
+        })
+          .sort({ timestamp: -1 })
+          .skip((pageNumber - 1) * limitNumber)
+          .limit(limitNumber)
+      : [];
+    let query:any = {
       "obtained.studentId": new ObjectId(user._id),
-    }).populate("batchIds");
+    };
+    if (search) {
+      query.$or = [
+        { subject: { $regex: search, $options: "i" } },
+        { title: { $regex: search, $options: "i" } },
+      ];
+    }
+    if (scores) {
+      count = await Score.countDocuments(query);
+      pages = Math.ceil(count / limitNumber);
+    }
+
+    const scoresData = scores
+      ? await Score.find(query)
+          .populate("batchIds")
+          .sort({ timestamp: -1 })
+          .skip((pageNumber - 1) * limitNumber)
+          .limit(limitNumber)
+      : [];
 
     // Process the scores to mark absences and format the response
-    const processedScores = scores.map((score) => {
+    const processedScores = scoresData.map((score) => {
       const studentScore = score.obtained.find(
         (item) => item.studentId.toString() === user._id.toString()
       );
@@ -117,8 +175,14 @@ router.get("/data", async (req, res) => {
       success: true,
       data: {
         userData: user,
-        punches: punches,
+        punches: punchesData,
         scores: processedScores,
+      },
+      pagination: {
+        current: pageNumber,
+        total: pages,
+        rows: limitNumber,
+        count,
       },
     });
   } catch (error) {

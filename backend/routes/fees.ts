@@ -9,23 +9,33 @@ const { ObjectId } = Types;
 const router = express.Router();
 
 router.get("/", async (req, res) => {
-  const { page = 1, rows = 10, search = "" } = req.query;
+  const { page = 1, rows = 10, search = "", selectedIds = "" } = req.query;
   const pageNumber = parseInt(page as string);
   const limitNumber = parseInt(rows as string);
 
   try {
-    const searchRegex = new RegExp(search as string, 'i');
+    const searchRegex = new RegExp(search as string, "i");
 
+    let query: any = {
+      role: "student",
+      deleted: false,
+    };
+
+    if (search)
+      query.$or = [
+        { name: { $regex: searchRegex } },
+        { phone: { $regex: searchRegex } },
+      ];
+
+    if (selectedIds)
+      query.batchIds = {
+        $in: (selectedIds as string).split(",").map(_ => new ObjectId(_)),
+      };
+
+    console.log(query);
     const pipeline = [
-      { 
-        $match: { 
-          role: "student",
-          deleted: false,
-          $or: [
-            { name: { $regex: searchRegex } },
-            { phone: { $regex: searchRegex } }
-          ]
-        } 
+      {
+        $match: query,
       },
       {
         $lookup: {

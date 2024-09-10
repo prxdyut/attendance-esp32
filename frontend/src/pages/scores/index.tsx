@@ -1,9 +1,10 @@
-
 import {
   Box,
   Button,
   Card,
-  CardContent, IconButton, Paper,
+  CardContent,
+  IconButton,
+  Paper,
   Stack,
   Table,
   TableBody,
@@ -13,11 +14,9 @@ import {
   TableRow,
   Typography,
   useMediaQuery,
-  useTheme
+  useTheme,
 } from "@mui/material";
-import {
-  Add, EditOutlined, VisibilityOutlined
-} from "@mui/icons-material";
+import { Add, EditOutlined, VisibilityOutlined } from "@mui/icons-material";
 import { format, parseISO } from "date-fns";
 import { grey } from "@mui/material/colors";
 import ModalButton from "../../components/ModalForm";
@@ -31,7 +30,7 @@ export default function Scores() {
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"), {
     noSsr: true,
   });
-  
+
   return (
     <Stack
       sx={{ overflow: "hidden", height: "100%", flexFlow: "column" }}
@@ -99,8 +98,11 @@ export default function Scores() {
           <PaginationTable
             name={"scores"}
             url={`/scores`}
-            placeholder="Search for Scores"
+            placeholder="Search for Subject or Title"
             notFound="No Scores found"
+            hasDateFilter
+            hasSearchFilter
+            hasBatchFilter
           >
             {(data) => {
               return (
@@ -113,10 +115,10 @@ export default function Scores() {
                     <TableHead>
                       <TableRow>
                         <TableCell>UID</TableCell>
-                        <TableCell>Batch</TableCell>
+                        <TableCell>Title</TableCell>
                         <TableCell>Subject</TableCell>
-                        <TableCell>Start</TableCell>
-                        <TableCell>End</TableCell>
+                        <TableCell>Total</TableCell>
+                        <TableCell>Batch</TableCell>
                         <TableCell>Actions</TableCell>
                       </TableRow>
                     </TableHead>
